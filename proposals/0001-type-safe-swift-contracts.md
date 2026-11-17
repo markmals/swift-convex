@@ -3,7 +3,7 @@ id: proposal.0001
 title: Type-Safe Swift Contracts for Convex
 authors: [OpenAI coding assistant]
 status: draft
-pull-request:
+pull-request: https://github.com/markmals/swift-convex/pull/1
 issues: []
 supersedes: []
 ---
