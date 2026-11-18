@@ -43,7 +43,7 @@ A developer can derive Swift contracts from a real Convex backend, use them for 
 
 ## Revision history
 
-| Date       | Change                                                             | Related proposal                                             |
-| ---------- | ------------------------------------------------------------------ | ------------------------------------------------------------ |
-| 2026-11-17 | Recorded the initial project intent; architecture remains a draft. | [proposal.0001](proposals/0001-type-safe-swift-contracts.md) |
+| Date       | Change                                                                                    | Related proposal                                             |
+| ---------- | ----------------------------------------------------------------------------------------- | ------------------------------------------------------------ |
+| 2026-11-17 | Recorded the initial project intent; architecture remains a draft.                        | [proposal.0001](proposals/0001-type-safe-swift-contracts.md) |
 | 2026-11-18 | Accepted the generated contracts, typed client, and live Observable query implementation. | [proposal.0001](proposals/0001-type-safe-swift-contracts.md) |
