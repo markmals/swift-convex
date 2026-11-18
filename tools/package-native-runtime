@@ -1,0 +1,139 @@
+#!/usr/bin/env bash
+# Packages .build/native/ConvexRuntimeFFI.xcframework (from tools/build-native-runtime) into a
+# SwiftPM binary-target archive with its checksum and provenance. It never uploads or tags.
+#
+# Outputs in .build/native:
+#   ConvexRuntimeFFI.xcframework.zip         top-level ConvexRuntimeFFI.xcframework
+#   ConvexRuntimeFFI.xcframework.zip.sha256  SwiftPM checksum (SHA-256 of the zip)
+#   ConvexRuntimeFFI.provenance.json         build record, checksum, and dependency licenses
+#
+# Packaging fails unless the committed Swift bindings, the bundled headers, and every slice
+# still match the build record, so a published checksum always names a matched pair.
+set -euo pipefail
+
+root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+crate="$root/RustRuntime"
+output="$root/.build/native"
+framework="ConvexRuntimeFFI"
+bindings="$root/Sources/ConvexNativeBindings/ConvexNativeBindings.swift"
+xcframework="$output/$framework.xcframework"
+record="$output/$framework.build.json"
+archive="$output/$framework.xcframework.zip"
+
+source "$root/tools/native-toolchain.sh"
+configure_native_toolchain "$crate"
+
+if [[ ! -d "$xcframework" || ! -f "$record" ]]; then
+    echo "error: run tools/build-native-runtime first" >&2
+    exit 1
+fi
+
+sha256() {
+    shasum -a 256 "$1" | cut -d ' ' -f 1
+}
+
+fail() {
+    echo "error: $1; rerun tools/build-native-runtime" >&2
+    exit 1
+}
+
+[[ "$(sha256 "$crate/Cargo.lock")" == "$(jq -r .source.cargoLockSHA256 "$record")" ]] ||
+    fail "Cargo.lock no longer matches the built artifact"
+
+[[ "$(sha256 "$bindings")" == "$(jq -r .bindings.sha256 "$record")" ]] ||
+    fail "Sources/ConvexNativeBindings no longer matches the built artifact"
+
+slice_count=0
+while IFS=$'\t' read -r identifier library_path headers_path; do
+    slice="$xcframework/$identifier"
+    headers="$slice/$headers_path/$framework"
+    [[ "$(sha256 "$headers/$framework.h")" == "$(jq -r .ffiModule.headerSHA256 "$record")" ]] ||
+        fail "$identifier has a different FFI header"
+    [[ "$(sha256 "$headers/module.modulemap")" == "$(jq -r .ffiModule.modulemapSHA256 "$record")" ]] ||
+        fail "$identifier has a different module map"
+    library_sha="$(sha256 "$slice/$library_path")"
+    jq -e --arg sha "$library_sha" 'any(.slices[]; .sha256 == $sha)' "$record" >/dev/null ||
+        fail "$identifier library is not a recorded build output"
+    slice_count=$((slice_count + 1))
+done < <(
+    plutil -convert json -o - "$xcframework/Info.plist" |
+        jq -r '.AvailableLibraries[] | [.LibraryIdentifier, .LibraryPath, .HeadersPath] | @tsv'
+)
+[[ "$slice_count" -eq 3 ]] || fail "expected 3 slices, found $slice_count"
+
+metadata="$(cd "$crate" && cargo metadata --locked --format-version 1 --filter-platform aarch64-apple-ios)"
+licenses="$(jq '
+    (.resolve.nodes | map({key: .id, value: .}) | from_entries) as $nodes
+    | (.packages | map({key: .id, value: .}) | from_entries) as $packages
+    | {frontier: [.resolve.root], seen: {}}
+    | until(.frontier | length == 0;
+        .frontier[0] as $id
+        | .frontier |= .[1:]
+        | if .seen[$id] then . else
+            .seen[$id] = true
+            | .frontier += [$nodes[$id].deps[] | select(any(.dep_kinds[]; .kind == null)) | .pkg]
+          end)
+    | .seen | keys
+    | map($packages[.] | {name, version, license, repository})
+    | sort_by(.name, .version)
+' <<<"$metadata")"
+
+# Normalize metadata and member order so identical inputs produce an identical archive.
+staging="$(mktemp -d)"
+trap 'rm -rf "$staging"' EXIT
+cp -R "$xcframework" "$staging/"
+license_root="$staging/$framework.xcframework/Licenses"
+mkdir -p "$license_root"
+printf '%s\n' "$licenses" >"$license_root/index.json"
+while IFS=$'\t' read -r name version directory license; do
+    destination="$license_root/$name-$version"
+    mkdir -p "$destination"
+    count=0
+    while IFS= read -r file; do
+        relative="${file#"$directory/"}"
+        mkdir -p "$(dirname "$destination/$relative")"
+        cp "$file" "$destination/$relative"
+        count=$((count + 1))
+    done < <(find "$directory" -maxdepth 2 -type f \( -iname 'license*' -o -iname 'copying*' -o -iname 'notice*' \) -print | LC_ALL=C sort)
+    if [[ "$count" -eq 0 ]]; then
+        case "$license" in
+            MPL-2.0|MPL-2.0+)
+                cp "$crate/licenses/MPL-2.0.txt" "$destination/LICENSE"
+                ;;
+            *)
+                fail "no redistribution license text for $name $version ($license)"
+                ;;
+        esac
+    fi
+done < <(jq -r --argjson linked "$licenses" '
+    .packages[] as $package
+    | select(any($linked[]; .name == $package.name and .version == $package.version))
+    | [$package.name, $package.version, ($package.manifest_path | sub("/Cargo.toml$"; "")), $package.license]
+    | @tsv
+' <<<"$metadata")
+find "$staging/$framework.xcframework" -type d -exec chmod 755 {} +
+find "$staging/$framework.xcframework" -type f -exec chmod 644 {} +
+find "$staging/$framework.xcframework" -exec touch -h -t 198001010000.00 {} +
+rm -f "$archive"
+(
+    cd "$staging"
+    find "$framework.xcframework" -print | LC_ALL=C sort | zip -X -q -@ "$archive"
+)
+checksum="$(sha256 "$archive")"
+echo "$checksum" >"$archive.sha256"
+
+
+jq \
+    --arg archive "$framework.xcframework.zip" \
+    --arg checksum "$checksum" \
+    --argjson size "$(stat -f %z "$archive")" \
+    --argjson licenses "$licenses" \
+    '. + {
+        archive: {file: $archive, sha256: $checksum, bytes: $size, topLevel: (.artifact + ".xcframework")},
+        projectLicenseFiles: ["RustRuntime/LICENSE", "RustRuntime/NOTICE"],
+        linkedPackages: $licenses
+    }' "$record" >"$output/$framework.provenance.json"
+
+echo "Archive:    $archive"
+echo "Checksum:   $checksum"
+echo "Provenance: $output/$framework.provenance.json"

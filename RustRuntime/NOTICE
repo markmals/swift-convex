@@ -1,0 +1,39 @@
+convex-swift-runtime
+Copyright 2024 Convex, Inc.
+
+This directory contains a modified copy of the rust/ bridge from convex-mobile
+(https://github.com/get-convex/convex-mobile), revision
+f1a074ac2a4581f6f10f274eb237de05bbc91092, licensed under the Apache License,
+Version 2.0. LICENSE in this directory is that project's license, unchanged.
+
+Changes made by swift-convex to src/lib.rs (now src/*.rs) and the build files:
+
+- Depend on convex 0.10.4 (subscription leak fix, get-convex/convex-rs#15)
+  instead of the 0.10.3 lockfile, and use rustls with the ring provider and
+  webpki roots in place of aws-lc-rs.
+- Move from UniFFI 0.28 UDL to UniFFI 0.32.2 procedural macros and rename the
+  exported interface for the internal ConvexNative Swift target.
+- Return structured InvalidRequest errors for malformed function paths, JSON,
+  or Convex values instead of panicking through `expect`.
+- Add per-operation cancellation signals that abort pending native work, and
+  make subscription handles abort their delivery task when cancelled or
+  dropped.
+- Run one-shot queries without the `convex` crate's panicking `query`
+  convenience, and report a stream that ends early as an error.
+- Retire replaced authentication providers so a pending or late token from a
+  previous provider cannot restore its session, and treat provider failures as
+  unauthenticated.
+- Replace the async foreign AuthTokenProvider method with a synchronous call
+  that completes a Rust-owned TokenRequest, because UniFFI's generated Swift
+  for async foreign methods does not compile under Swift 6 strict concurrency.
+- Create the Tokio runtime lazily, shut it down without blocking, enlarge the
+  connection-state buffer, and remove platform logging initialization.
+- Return errors from foreign callbacks instead of panicking on unexpected
+  callback failures.
+
+The packaged static library also contains third-party Rust crates. The archive's
+Licenses directory includes their packaged license notices and a version/source
+index. Crates published without license files under MPL-2.0 or MPL-2.0+ include
+the unchanged MPL-2.0 text from https://github.com/mozilla/uniffi-rs/blob/main/LICENSE.
+Dependency sources are available at the recorded repository URLs and as the
+versioned crate archives identified by Cargo.lock.

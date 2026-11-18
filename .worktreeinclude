@@ -1,0 +1,7 @@
+# What `wt step copy-ignored` carries into a new worktree. A path is copied only if it is both
+# gitignored and listed here, so this file is an allowlist of build caches that are expensive to
+# recreate and safe to share. Without this file, Worktrunk would copy every ignored file.
+#
+# Nothing qualifies for a Swift package. `.build/` records the absolute path it was built at, so a
+# copy under a new worktree path is stale on arrival, and SwiftPM already shares fetched
+# dependencies through its own cache. `.env.local` holds credentials, not a cache.

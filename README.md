@@ -1,28 +1,93 @@
 # Swift Convex
 
-Swift Convex is a proposed Swift package for calling Convex functions through generated, type-safe Swift APIs. The goal is to preserve the contract available to Convex's TypeScript client while following the Swift API Design Guidelines.
+`Convex` is a typed Swift client and generator for Convex backends. Generated request values bind function identity, arguments, and output. `ConvexClient` reuses the official Rust runtime; `observe(_:)` returns a live Observation model.
 
-## Start here
+No Swift library version has been released. The initial runtime supports arm64 iOS 17, iOS Simulator, and macOS 14 with Swift 6.4.
 
-- [Proposal 0001: Type-Safe Swift Contracts for Convex](proposals/0001-type-safe-swift-contracts.md): research, proposed API, generation pipeline, tradeoffs, and questions for review.
-- [Vision](VISION.md): project intent and boundaries.
-- [Proposal lifecycle](proposals/README.md): who decides when implementation can begin.
+## Unreleased dependency
 
-The proposal is a draft. There is no library, generator, macro, package plugin, release, or installation command yet. API and command examples in the proposal describe the proposed design.
+Use the `main` branch while the first library release is pending:
 
-## Template foundation
-
-This repository starts from the proposal and vision conventions in `/Users/orion/Developer/Templates/agentic-projects/swift-package`, inspected at template-repository revision `3f40d5d06aa75ebfa7a7535c46b5076e3b773467`. The proposal follows the `PROPOSAL.md` format supplied by the template's Workbench 3.0.1 dependency. Record-directory indexes and `dprint.json` come from the package template.
-
-Only the documentation foundation is instantiated at this stage. The template's example `SemanticVersion` library, placeholder package manifest, tests, and publishing automation are intentionally absent. Proposal 0001 specifies how to adapt the package scaffold after design approval, including the transport's platform limits and the backend-side TypeScript exporter.
-
-## Document validation
-
-With Workbench 3.0.1 and dprint 0.64.3 available:
-
-```sh
-workbench records validate --output text
-dprint check
+```swift
+.package(
+    url: "https://github.com/markmals/swift-convex.git",
+    branch: "main"
+)
 ```
 
-These commands validate records and formatting. They do not establish that the proposed Swift API or generator works.
+Add `.product(name: "Convex", package: "swift-convex")` to your target. Do not add the official `ConvexMobile` Swift SDK alongside it.
+
+The repository and its native binary artifact are private. SwiftPM needs GitHub read access for both the source repository and `api.github.com`. Configure a private netrc/keychain credential; CLI clients can pass `--netrc-file` to SwiftPM. Never put tokens in a package manifest. Applications download the checksummed native artifact and do not need Rust, Cargo, Node, or a deployment admin key to build.
+
+## Generate the contract
+
+The separate [backend exporter](https://github.com/markmals/convex-contract-exporter) reads TypeScript beside the server and writes runtime-neutral JSON. Its current compatibility pins are TypeScript 5.9.3 and Convex 1.50.0; it does not execute backend modules.
+
+```sh
+npx convex-contract-export --project convex/tsconfig.json --output contracts/convex-contract.json
+```
+
+Copy or publish that artifact to the Swift project. Add `convex-swift.json` in the consuming target directory:
+
+```json
+{
+    "contract": "../../Contracts/convex-contract.json",
+    "namespace": "API"
+}
+```
+
+Apply `.plugin(name: "ConvexGenerate", package: "swift-convex")` to that target and exclude the configuration file from ordinary source handling. The plugin generates Swift in its build work directory. For checked-in generation instead, configure `output` and run `swift package --allow-writing-to-package-directory generate-convex`. Use only one workflow per target.
+
+See the [format and naming configuration](guides/contract-format.md) for presence semantics, supported shapes, collision overrides, and drift checking.
+
+## Use generated requests
+
+On the main actor:
+
+```swift
+import Convex
+
+let client = ConvexClient(deploymentURL: deploymentURL)
+let request = API.Messages.List(channelID: channelID)
+let messages = client.observe(request)
+```
+
+Keep `messages` in stable view state. Reading its `.state` in SwiftUI tracks `.loading`, `.value`, and `.failed` transitions as backend data changes.
+
+- `observe(_:)` creates a live `@Observable` model.
+- `fetch(_:)` performs an async one-shot read.
+- `snapshots(for:)` supplies a throwing async sequence of snapshots.
+- `execute(mutation:)` and `execute(action:)` accept only their matching request kinds.
+
+The [client guide](guides/using-convex.md) includes a SwiftUI view, cancellation rules, authentication, and typed mutation examples.
+
+## Development
+
+Use Xcode 27.2 or later with Swift 6.4 and the iOS SDK, plus mise and [rustup](https://rustup.rs) for native maintainer builds:
+
+```sh
+mise trust && mise install
+mise run native:build
+CONVEX_NATIVE_LOCAL=1 mise run setup
+mise run check
+```
+
+Maintainer build/test tasks opt into the local native artifact. The external-consumer check deliberately uses the published binary; set `CONVEX_TEST_NETRC` to a private credential-file path when credentials are not in SwiftPM's normal stores.
+
+| Command                     | Verification                                                                                 |
+| --------------------------- | -------------------------------------------------------------------------------------------- |
+| `mise run test`             | Contract parsing, generation, wire codecs, client lifetimes, and Observation.                |
+| `mise run test:consumer`    | A real version-tagged dependency, generated source, and compiler rejection of invalid calls. |
+| `mise run build:platforms`  | Arm64 iOS device and simulator builds.                                                       |
+| `mise run docs`             | Public DocC reference with documentation warnings treated as errors.                         |
+| `mise run test:integration` | Live generated calls against an explicitly configured disposable backend.                    |
+| `mise run native:test`      | Rust value validation, cancellation, and authentication boundary tests.                      |
+| `mise run native:package`   | Matched native archive, checksum, provenance, and dependency license text.                   |
+
+The [verification guide](guides/verification.md) describes the live fixture and native release workflow. Unit tests require no deployment. Live tests are disabled unless a loopback fixture URL is supplied.
+
+## Project record
+
+This project started from the `swift-package` template at revision `3f40d5d06aa75ebfa7a7535c46b5076e3b773467`, preserving its SwiftPM, Swift Testing, external-consumer, DocC, Workbench, and Knope conventions. Its example library and unsupported platform claims were removed.
+
+See [proposal 0001](proposals/0001-type-safe-swift-contracts.md), the [vision](VISION.md), and [changelog](CHANGELOG.md). Native dependency notices are in [RustRuntime/NOTICE](RustRuntime/NOTICE) and the artifact's `Licenses` directory.

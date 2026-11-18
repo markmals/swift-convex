@@ -1,0 +1,271 @@
+#!/usr/bin/env swift
+import Foundation
+
+// Proves that a separate package can depend on this library through a release tag, using only
+// its public API. Run it from the package root as `swift-verify-consumer`, with `tools/` on PATH
+// (`mise run test:consumer` does).
+//
+// 1. Reads the dependency URL and minimum version from `Consumer/Package.swift`.
+// 2. Commits a snapshot of the working tree (tracked and untracked files Git does not ignore) to
+//    a scratch repository and tags it `v<version>`, the tag Knope's single `[package]` creates.
+// 3. Copies `Consumer/` to scratch, mirrors the dependency URL to the snapshot repository, and
+//    runs `swift test --disable-testable-imports` there, so an `@testable import` cannot compile.
+// 4. Confirms that SwiftPM resolved the tagged version.
+//
+// The import sits directly under the shebang: swift-format joins a comment placed there onto the
+// shebang line.
+
+struct Failure: Error, CustomStringConvertible {
+    let description: String
+}
+
+/// The parts of `swift package dump-package` output this script reads.
+struct Manifest: Decodable {
+    struct Bound: Decodable {
+        let lowerBound: String
+    }
+
+    struct Dependency: Decodable {
+        let sourceControl: [SourceControl]?
+    }
+
+    struct Location: Decodable {
+        let remote: [Remote]?
+    }
+
+    struct Remote: Decodable {
+        let urlString: String
+    }
+
+    struct Requirement: Decodable {
+        let exact: [String]?
+        let range: [Bound]?
+    }
+
+    struct SourceControl: Decodable {
+        let identity: String
+        let location: Location
+        let requirement: Requirement
+    }
+
+    let dependencies: [Dependency]
+}
+
+/// The parts of `Package.resolved` this script reads.
+struct Resolved: Decodable {
+    struct Pin: Decodable {
+        let location: String
+        let state: State
+    }
+
+    struct State: Decodable {
+        let version: String?
+    }
+
+    let pins: [Pin]
+}
+
+/// Runs commands found on `PATH` in an environment confined to the scratch directory.
+struct Runner {
+    let environment: [String: String]
+
+    init(temporaryDirectory: URL) {
+        var environment = ProcessInfo.processInfo.environment
+        // A Git hook exports these; they would point the scratch repository's commands at this one.
+        for name in ["GIT_DIR", "GIT_INDEX_FILE", "GIT_WORK_TREE"] {
+            environment[name] = nil
+        }
+        // A tagged consumer must resolve the distributed binary, not a maintainer's local build.
+        environment["CONVEX_NATIVE_LOCAL"] = nil
+        // SwiftPM writes lock files to the temporary directory; keep them inside scratch.
+        environment["TMPDIR"] = temporaryDirectory.path
+        self.environment = environment
+    }
+
+    /// Runs `arguments` in `directory`, streaming its output unless `capture` is set.
+    @discardableResult
+    func callAsFunction(
+        _ arguments: [String],
+        in directory: URL,
+        capture: Bool = false
+    ) throws -> Data {
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: "/usr/bin/env")
+        var invocation = arguments
+        if arguments.first == "swift", let netrc = environment["CONVEX_TEST_NETRC"] {
+            invocation.insert(contentsOf: ["--netrc-file", netrc], at: 2)
+        }
+        process.arguments = invocation
+        process.currentDirectoryURL = directory
+        process.environment = environment
+        let pipe = Pipe()
+        if capture {
+            process.standardOutput = pipe
+            process.standardError = pipe
+        }
+        try process.run()
+        let output = capture ? pipe.fileHandleForReading.readDataToEndOfFile() : Data()
+        process.waitUntilExit()
+        guard process.terminationStatus == 0 else {
+            let command = arguments.joined(separator: " ")
+            throw Failure(
+                description:
+                    "`\(command)` exited with status \(process.terminationStatus)\n\(String(decoding: output, as: UTF8.self))"
+            )
+        }
+        return output
+    }
+}
+
+/// Copies `paths`, relative to `source`, into `destination`, creating directories as needed.
+func copy(_ paths: [String], from source: URL, to destination: URL) throws {
+    let files = FileManager.default
+    for path in paths where files.fileExists(atPath: source.appending(path: path).path) {
+        let target = destination.appending(path: path)
+        try files.createDirectory(
+            at: target.deletingLastPathComponent(),
+            withIntermediateDirectories: true
+        )
+        try files.copyItem(at: source.appending(path: path), to: target)
+    }
+}
+
+/// Writes a progress line now, rather than when buffered standard output is flushed.
+func report(_ message: String) {
+    FileHandle.standardOutput.write(Data("verify-consumer: \(message)\n".utf8))
+}
+
+struct CompilationFailureCase: Decodable {
+    let name: String
+    let diagnostic: String
+    let source: String
+}
+
+func verifyCompileFailures(in consumer: URL, run: Runner) throws {
+    let cases = try JSONDecoder().decode(
+        [CompilationFailureCase].self,
+        from: Data(contentsOf: consumer.appending(path: "CompileFailures.json"))
+    )
+    let source = consumer.appending(path: "Tests/ConsumerTests/InvalidRequest.swift")
+    for scenario in cases {
+        try scenario.source.write(to: source, atomically: true, encoding: .utf8)
+        defer { try? FileManager.default.removeItem(at: source) }
+        var diagnostic: String?
+        do {
+            try run(
+                ["swift", "test", "--disable-testable-imports", "--disable-dependency-cache"],
+                in: consumer,
+                capture: true
+            )
+        } catch let failure as Failure {
+            diagnostic = failure.description
+        }
+        guard let diagnostic,
+            diagnostic.contains("InvalidRequest.swift"),
+            diagnostic.localizedCaseInsensitiveContains(scenario.diagnostic)
+        else {
+            throw Failure(
+                description:
+                    "\(scenario.name) did not produce its expected request-type diagnostic:\n\(diagnostic ?? "compilation succeeded")"
+            )
+        }
+        report("compiler rejected \(scenario.name)")
+    }
+}
+
+func verifyConsumer(root: URL, scratch: URL) throws {
+    let temporaryDirectory = scratch.appending(path: "tmp")
+    try FileManager.default.createDirectory(
+        at: temporaryDirectory,
+        withIntermediateDirectories: true
+    )
+    let run = Runner(temporaryDirectory: temporaryDirectory)
+
+    let listing = try run(
+        ["git", "ls-files", "-z", "--cached", "--others", "--exclude-standard"],
+        in: root,
+        capture: true
+    )
+    let paths = String(decoding: listing, as: UTF8.self).split(separator: "\0").map(String.init)
+
+    // Read the copy: SwiftPM writes a `.build` cache next to any manifest it evaluates.
+    let consumer = scratch.appending(path: "consumer")
+    let prefix = "Consumer/"
+    try copy(
+        paths.filter { $0.hasPrefix(prefix) }.map { String($0.dropFirst(prefix.count)) },
+        from: root.appending(path: prefix),
+        to: consumer
+    )
+    let manifest = try JSONDecoder().decode(
+        Manifest.self,
+        from: run(["swift", "package", "dump-package"], in: consumer, capture: true)
+    )
+    guard manifest.dependencies.count == 1,
+        let dependency = manifest.dependencies[0].sourceControl?.first,
+        let url = dependency.location.remote?.first?.urlString
+    else {
+        throw Failure(description: "Consumer/Package.swift must have exactly one URL dependency")
+    }
+    guard
+        let version = dependency.requirement.range?.first?.lowerBound
+            ?? dependency.requirement.exact?.first
+    else {
+        throw Failure(description: "Consumer/Package.swift must require a version of \(url)")
+    }
+
+    // Preserve identity through the mirror: external plugin lookup uses the repository name.
+    let library = scratch.appending(path: dependency.identity)
+    try copy(paths, from: root, to: library)
+    try run(["git", "init", "--quiet", "--initial-branch=main"], in: library)
+    try run(["git", "add", "--all"], in: library)
+    try run(
+        [
+            "git", "-c", "core.hooksPath=/dev/null", "-c", "commit.gpgSign=false",
+            "-c", "user.name=verify-consumer", "-c", "user.email=verify-consumer@localhost",
+            "commit", "--quiet", "--no-verify", "--message=Snapshot for verify-consumer",
+        ],
+        in: library
+    )
+    try run(["git", "tag", "v\(version)"], in: library)
+    report("tagged a snapshot of the working tree v\(version)")
+
+    try run(
+        [
+            "swift", "package", "--package-path", consumer.path,
+            "config", "set-mirror", "--original", url, "--mirror", library.path,
+        ],
+        in: consumer
+    )
+    try run(
+        [
+            "swift", "test", "--package-path", consumer.path,
+            "--disable-testable-imports", "--disable-dependency-cache",
+        ],
+        in: consumer
+    )
+
+    let resolved = try JSONDecoder().decode(
+        Resolved.self,
+        from: Data(contentsOf: consumer.appending(path: "Package.resolved"))
+    )
+    let pinned = resolved.pins.first { $0.location == url }?.state.version
+    guard pinned == version else {
+        throw Failure(
+            description: "Consumer resolved \(url) at \(pinned ?? "no version"), not \(version)"
+        )
+    }
+    try verifyCompileFailures(in: consumer, run: run)
+    report("Consumer resolved \(url) at \(version) from tag v\(version)")
+}
+
+let root = URL(fileURLWithPath: FileManager.default.currentDirectoryPath)
+let scratch = FileManager.default.temporaryDirectory
+    .appending(path: "verify-consumer-\(UUID().uuidString)")
+do {
+    try verifyConsumer(root: root, scratch: scratch)
+    try? FileManager.default.removeItem(at: scratch)
+} catch {
+    try? FileManager.default.removeItem(at: scratch)
+    FileHandle.standardError.write(Data("verify-consumer: \(error)\n".utf8))
+    exit(1)
+}

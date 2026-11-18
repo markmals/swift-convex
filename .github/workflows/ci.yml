@@ -1,0 +1,49 @@
+name: CI
+
+on:
+    push:
+        branches: [main]
+    pull_request:
+
+permissions:
+    contents: read
+
+concurrency:
+    group: ci-${{ github.workflow }}-${{ github.head_ref || github.ref }}
+    cancel-in-progress: true
+
+jobs:
+    check:
+        name: Check
+        runs-on: xcode-27
+        steps:
+            - uses: actions/checkout@v7
+              with:
+                  fetch-depth: 0
+            - uses: maxim-lobanov/setup-xcode@v1
+              with:
+                  xcode-version: latest-stable
+            - uses: jdx/mise-action@v5
+            - name: Read pinned Rust toolchain
+              id: rust
+              run: |
+                  toolchain=$(sed -n 's/^channel = "\(.*\)"$/\1/p' RustRuntime/rust-toolchain.toml)
+                  test -n "$toolchain"
+                  echo "toolchain=$toolchain" >> "$GITHUB_OUTPUT"
+            - uses: dtolnay/rust-toolchain@df2a88e9fe4098bad09cb42c3dec7187f15861fc
+              with:
+                  toolchain: ${{ steps.rust.outputs.toolchain }}
+            - name: Build native runtime
+              run: mise run native:build
+            - name: Authenticate native dependency download
+              env:
+                  GH_TOKEN: ${{ github.token }}
+              run: |
+                  umask 077
+                  printf 'machine api.github.com login x-access-token password %s\n' "$GH_TOKEN" > "$RUNNER_TEMP/convex.netrc"
+                  echo "CONVEX_TEST_NETRC=$RUNNER_TEMP/convex.netrc" >> "$GITHUB_ENV"
+            - name: Verify Swift package
+              run: mise run check
+            - name: Remove artifact credentials
+              if: always()
+              run: rm -f "$RUNNER_TEMP/convex.netrc"

@@ -1,0 +1,130 @@
+{
+    "formatVersion": 1,
+    "provenance": {
+        "exporterVersion": "fixture",
+        "convexVersion": "1.50.0",
+        "typescriptVersion": "6.0.2",
+        "sourceHash": "785faa27357ba1124ed1893af0d3a62b811e64a7dd22469758da3925bd1e4374"
+    },
+    "functions": [
+        {
+            "path": "messages:get",
+            "module": ["messages"],
+            "name": "get",
+            "kind": "query",
+            "arguments": {
+                "kind": "object",
+                "fields": [
+                    {
+                        "name": "messageId",
+                        "type": { "kind": "id", "table": "messages" },
+                        "optional": false
+                    }
+                ]
+            },
+            "result": {
+                "kind": "union",
+                "variants": [{ "kind": "null" }, { "kind": "ref", "name": "Message" }]
+            },
+            "typeSource": "inferred"
+        },
+        {
+            "path": "messages:list",
+            "module": ["messages"],
+            "name": "list",
+            "kind": "query",
+            "arguments": {
+                "kind": "object",
+                "fields": [
+                    {
+                        "name": "channelId",
+                        "type": { "kind": "id", "table": "channels" },
+                        "optional": false
+                    }
+                ]
+            },
+            "result": { "kind": "array", "element": { "kind": "ref", "name": "Message" } },
+            "typeSource": "inferred"
+        },
+        {
+            "path": "messages:send",
+            "module": ["messages"],
+            "name": "send",
+            "kind": "mutation",
+            "arguments": {
+                "kind": "object",
+                "fields": [
+                    { "name": "body", "type": { "kind": "string" }, "optional": false },
+                    {
+                        "name": "channelId",
+                        "type": { "kind": "id", "table": "channels" },
+                        "optional": false
+                    },
+                    {
+                        "name": "note",
+                        "type": {
+                            "kind": "union",
+                            "variants": [{ "kind": "null" }, { "kind": "string" }]
+                        },
+                        "optional": true
+                    }
+                ]
+            },
+            "result": { "kind": "id", "table": "messages" },
+            "typeSource": "inferred"
+        },
+        {
+            "path": "notifications:deliver",
+            "module": ["notifications"],
+            "name": "deliver",
+            "kind": "action",
+            "arguments": {
+                "kind": "object",
+                "fields": [
+                    {
+                        "name": "messageId",
+                        "type": { "kind": "id", "table": "messages" },
+                        "optional": false
+                    }
+                ]
+            },
+            "result": { "kind": "null" },
+            "typeSource": "inferred"
+        }
+    ],
+    "tables": [
+        { "name": "channels", "document": { "kind": "ref", "name": "Channel" } },
+        { "name": "messages", "document": { "kind": "ref", "name": "Message" } }
+    ],
+    "types": {
+        "Channel": {
+            "kind": "object",
+            "fields": [
+                { "name": "_creationTime", "type": { "kind": "float64" }, "optional": false },
+                { "name": "_id", "type": { "kind": "id", "table": "channels" }, "optional": false },
+                { "name": "name", "type": { "kind": "string" }, "optional": false }
+            ]
+        },
+        "Message": {
+            "kind": "object",
+            "fields": [
+                { "name": "_creationTime", "type": { "kind": "float64" }, "optional": false },
+                { "name": "_id", "type": { "kind": "id", "table": "messages" }, "optional": false },
+                { "name": "body", "type": { "kind": "string" }, "optional": false },
+                {
+                    "name": "channelId",
+                    "type": { "kind": "id", "table": "channels" },
+                    "optional": false
+                },
+                {
+                    "name": "note",
+                    "type": {
+                        "kind": "union",
+                        "variants": [{ "kind": "null" }, { "kind": "string" }]
+                    },
+                    "optional": true
+                }
+            ]
+        }
+    }
+}

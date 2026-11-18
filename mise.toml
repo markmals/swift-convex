@@ -1,0 +1,114 @@
+#:schema https://mise.jdx.dev/schema/mise.json
+min_version = "2026.11.9"
+
+[settings]
+lockfile = true
+lockfile_platforms = ["macos-arm64", "linux-x64", "linux-arm64"]
+disable_tools = ["swift"]
+
+[tools]
+"github:markmals/workbench" = "3.0.1"
+hk = "2.8.1"
+gh = "2.103.2"
+"github:gastownhall/beads" = "1.3.2"
+actionlint = "1.7.12"
+dprint = "0.64.3"
+worktrunk = "0.81.0"
+"github:knope-dev/knope" = { version = "0.24.0", version_prefix = "knope/v" }
+"github:dmno-dev/varlock" = "1.25.0"
+
+[env]
+_.path = ["{{config_root}}/tools"]
+
+[hooks]
+postinstall = 'ln -sfn "$(mise where github:markmals/workbench)" "{{config_root}}/.workbench"'
+
+[tasks.setup]
+description = "Resolve Swift dependencies, initialize issue tracking, and install hooks"
+run = [
+    "swift package resolve",
+    "if [ -f .beads/config.yaml ]; then bd bootstrap --yes; else bd init --non-interactive --prefix swift-convex --skip-agents --skip-hooks; fi",
+    "bd config set export.auto true",
+    "bd config set dolt.auto-push false",
+    "hk install --mise",
+]
+
+[tasks.build]
+alias = "b"
+description = "Build Swift runtime and generator with warnings as errors"
+run = "swift build -Xswiftc -warnings-as-errors"
+env.CONVEX_NATIVE_LOCAL = "1"
+
+[tasks.test]
+alias = "t"
+description = "Run Swift contract, codec, client, and Observation tests"
+run = "swift test -Xswiftc -warnings-as-errors"
+env.CONVEX_NATIVE_LOCAL = "1"
+
+[tasks."test:integration"]
+description = "Exercise generated requests against an explicitly configured disposable backend"
+run = "swift test --filter ConvexIntegrationTests -Xswiftc -warnings-as-errors"
+env.CONVEX_NATIVE_LOCAL = "1"
+
+[tasks."test:consumer"]
+description = "Verify a tagged dependency from a separate consumer"
+run = "swift-verify-consumer"
+
+[tasks."build:platforms"]
+description = "Build the approved arm64 iOS device and simulator targets"
+run = [
+    "xcodebuild build -quiet -scheme Convex -derivedDataPath .build/xcode -destination generic/platform=iOS",
+    "xcodebuild build -quiet -scheme Convex -derivedDataPath .build/xcode -destination 'generic/platform=iOS Simulator' ARCHS=arm64",
+]
+env.CONVEX_NATIVE_LOCAL = "1"
+
+[tasks.docs]
+description = "Build the public DocC reference with warnings as errors"
+run = "xcodebuild docbuild -quiet -scheme Convex -derivedDataPath .build/docc -destination 'platform=macOS,arch=arm64' OTHER_DOCC_FLAGS=--warnings-as-errors"
+env.CONVEX_NATIVE_LOCAL = "1"
+
+[tasks.check]
+alias = "c"
+description = "Run the package, consumer, platform, documentation, and record gates"
+depends = ["test", "test:consumer", "build:platforms", "docs", "native:test"]
+run = ["hk check --all", "mise run validate"]
+
+[tasks.fmt]
+alias = "f"
+description = "Format project-owned sources and records"
+usage = 'arg "[files]" help="Files to format" var=#true'
+run = "hk fix ${usage_files:---all}"
+
+[tasks.validate]
+description = "Validate project records and Workbench setup"
+run = ["workbench records validate --output text", "workbench project validate --output text"]
+
+[tasks.status]
+run = "workbench workflow status --output text"
+
+[tasks."beads:sync"]
+run = "workbench beads sync --output text"
+
+[tasks."beads:claim"]
+run = "workbench beads claim --output text"
+
+[tasks."beads:close"]
+run = "workbench beads close --output text"
+
+[tasks."native:build"]
+description = "Build the pinned native bridge for the three approved slices"
+run = "tools/build-native-runtime"
+
+[tasks."native:test"]
+description = "Run the pinned Rust boundary and value tests"
+run = "tools/test-native-runtime"
+
+[tasks."native:package"]
+description = "Package the native artifact with provenance and checksum"
+run = "tools/package-native-runtime"
+
+[tasks."release:prepare"]
+run = "varlock run --filter GITHUB_TOKEN -- knope prepare-release --verbose"
+
+[tasks.release]
+run = "varlock run --filter GITHUB_TOKEN -- knope release --verbose"

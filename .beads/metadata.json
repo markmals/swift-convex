@@ -1,0 +1,7 @@
+{
+  "database": "dolt",
+  "backend": "dolt",
+  "dolt_mode": "embedded",
+  "dolt_database": "swift_convex",
+  "project_id": "ed0bb3d2-59df-40e9-982d-20e44e72ab3e"
+}

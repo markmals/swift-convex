@@ -1,0 +1,20 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+source "$root/tools/native-toolchain.sh"
+
+# Package-managed rustup can live outside CARGO_HOME/bin, as it does on CI.
+(
+    probe="$(mktemp -d)"
+    trap 'rm -rf "$probe"' EXIT
+    export CARGO_HOME="$probe"
+    configure_native_toolchain "$root/RustRuntime"
+    test ! -e "$CARGO_HOME/bin/rustup"
+    cargo --version
+    rustc --version
+)
+
+configure_native_toolchain "$root/RustRuntime"
+cd "$root/RustRuntime"
+cargo test --locked "$@"

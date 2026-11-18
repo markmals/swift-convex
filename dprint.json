@@ -19,7 +19,9 @@
         ".beads/**",
         "**/Package.resolved",
         "mise.lock",
-        "CHANGELOG.md"
+        "CHANGELOG.md",
+        "RustRuntime/Cargo.lock",
+        "Fixtures/LiveBackend/contract.json"
     ],
     "plugins": [
         "https://plugins.dprint.dev/markdown-0.29.0.wasm",

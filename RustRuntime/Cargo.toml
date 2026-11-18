@@ -1,0 +1,47 @@
+[package]
+name = "convex-swift-runtime"
+version = "0.1.0"
+edition = "2021"
+license = "Apache-2.0"
+publish = false
+rust-version = "1.87"
+description = """
+UniFFI boundary between swift-convex and the official convex Rust client. Derived from \
+convex-mobile's rust/ bridge at f1a074ac2a4581f6f10f274eb237de05bbc91092.\
+"""
+
+[lib]
+name = "convex_runtime"
+crate-type = ["lib", "staticlib"]
+
+[[bin]]
+# Maintainer-only generator for the Swift bindings, built for the host by
+# tools/build-native-runtime. It is never linked into the static library.
+name = "uniffi-bindgen-swift"
+path = "uniffi-bindgen-swift.rs"
+required-features = ["bindgen"]
+
+[features]
+bindgen = ["uniffi/cli", "uniffi/cargo-metadata"]
+
+[dependencies]
+anyhow = "1"
+# 0.10.4 contains the query-subscription leak fix (get-convex/convex-rs#15).
+convex = { version = "=0.10.4", default-features = false, features = ["rustls-tls-webpki-roots"] }
+convex_sync_types = "=0.10.4"
+futures = "0.3"
+# The ring provider builds from source with Xcode's clang alone; no CMake or libclang.
+rustls = { version = "0.23", default-features = false, features = ["ring", "std", "tls12"] }
+serde_json = "1"
+thiserror = "2"
+tokio = { version = "1.47.1", features = ["macros", "rt-multi-thread", "sync"] }
+uniffi = { version = "=0.32.2", default-features = false }
+
+[dev-dependencies]
+tokio = { version = "1.47.1", features = ["macros", "rt-multi-thread", "sync", "time"] }
+
+[profile.release]
+codegen-units = 1
+lto = "fat"
+# UniFFI converts Rust panics at the boundary into Swift errors, which requires unwinding.
+panic = "unwind"

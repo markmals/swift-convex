@@ -2,8 +2,8 @@
 id: proposal.0001
 title: Type-Safe Swift Contracts for Convex
 authors: [OpenAI coding assistant]
-status: draft
-pull-request:
+status: implemented
+pull-request: https://github.com/markmals/swift-convex/pull/1
 issues: []
 supersedes: []
 ---
@@ -12,7 +12,7 @@ supersedes: []
 
 ## Summary
 
-Generate Swift function references, arguments, results, and document IDs from Convex's TypeScript contract. Reuse the official Swift transport behind a typed client. Export the contract beside the backend, then generate Swift offline through a SwiftPM build plugin. Keep macros optional rather than making them responsible for backend discovery.
+Generate typed Swift requests, results, and document IDs from a backend-exported neutral contract. `ConvexClient` uses the shared Rust runtime, with live Observable queries, async sequences, and one-shot operations. SwiftPM plugins generate Swift locally; TypeScript export stays in backend tooling. No custom macro package is required.
 
 ## Motivation
 
@@ -32,7 +32,7 @@ The TypeScript client derives those relationships from the backend's generated `
 
 ### Relevant constraints and principles
 
-[Swift's API Design Guidelines](https://www.swift.org/documentation/api-design-guidelines/) prioritize clarity at the call site, established terminology, argument labels, and consistent naming. The proposed API uses nominal argument/result types and generics rather than dynamic member lookup or string interpolation.
+[Swift's API Design Guidelines](https://www.swift.org/documentation/api-design-guidelines/) prioritize clarity at the call site, established terminology, argument labels, and consistent naming. Generated nominal request values bind function identity and arguments together. Generic client methods infer their outputs without dynamic member lookup, raw string paths, or a separately supplied argument object.
 
 [Build tool plugins](https://github.com/swiftlang/swift-evolution/blob/main/proposals/0303-swiftpm-extensible-build-tools.md) declare generation commands with known inputs and outputs. [Command plugins](https://github.com/swiftlang/swift-evolution/blob/main/proposals/0332-swiftpm-command-plugins.md) support explicit user actions and write permissions. These roles fit local code generation; deployment access does not belong in an application build.
 
@@ -44,9 +44,9 @@ For supported contracts, the endpoint fixes the operation kind, arguments, and o
 
 ### Remaining uncertainty
 
-This is source-based design research, not a tested implementation. The first implementation work must prove extraction of inferred types, full-value codec interoperability through the SDK's public API, Swift 6 isolation, and subscription teardown. Failure of those proofs requires revising the proposal before promising compatibility.
+This is source-based design research, not a tested implementation. The first implementation work must prove extraction of inferred types, complete Convex-value interoperability across the Rust FFI boundary, Swift 6 isolation, authentication, and subscription teardown. Failure of those proofs requires revising the proposal before promising compatibility.
 
-There is also a known upstream prerequisite: [convex-swift PR #32](https://github.com/convex/convex-swift/pull/32), still open when inspected, reports a cancellation crash, an early-cancellation leak, and dropped initial subscription values. The [0.8.2 implementation](https://github.com/convex/convex-swift/blob/1c69cdd9723ffb5857f48aa360d079ed09d614fd/Sources/ConvexMobile/ConvexMobile.swift#L44-L83) still uses the affected publisher chain. A typed wrapper cannot recover an event already lost inside that chain. Reliable subscriptions and one-shot fetch require an upstream fix or a separately approved, narrowly maintained fork; timeouts and retries would hide the defect.
+[convex-swift PR #32](https://github.com/convex/convex-swift/pull/32) reports a cancellation crash, an early-cancellation leak, and dropped initial values in the Swift SDK's Combine subscription chain. This proposal now bypasses that layer and consumes the Rust bridge directly, so that PR is evidence for regression scenarios rather than a release dependency. Our Swift callback bridge still needs its own verified lifetime state machine; reusing Rust does not automatically make the language boundary safe.
 
 ## Existing baseline
 
@@ -54,51 +54,50 @@ The repository was empty. Its documentation foundation now follows the requested
 
 Preserve the template's root SwiftPM manifest, Swift 6 strict concurrency, Swift Testing, external `Consumer/` verification, DocC, formatting, and version-tag release model when implementation starts. Replace its `SemanticVersion` example completely. Its broad platform claims and Swift-only tooling assumptions need adaptation to the actual transport and exporter.
 
-Preserve the official Convex client's connection, authentication, and synchronization behavior. Its string-based dispatch and caller-selected response types are the boundary this package improves. The TypeScript generated API is the semantic baseline; copying a particular JavaScript object layout is incidental.
+Preserve Convex's connection, authentication, and synchronization behavior by reusing its Rust client. The TypeScript generated API is the semantic baseline. The existing Swift SDK demonstrates mobile integration, but its string-based API, Combine wrappers, and caller-selected response types are not dependencies of the revised design.
 
-The inspected SDK baseline is `convex-swift` 0.8.2 at `1c69cdd9723ffb5857f48aa360d079ed09d614fd`. Its [manifest](https://github.com/convex/convex-swift/blob/1c69cdd9723ffb5857f48aa360d079ed09d614fd/Package.swift) exposes `ConvexMobile`, with a bundled Rust XCFramework. Its [binary manifest](https://github.com/convex/convex-swift/blob/1c69cdd9723ffb5857f48aa360d079ed09d614fd/libconvexmobile-rs.xcframework/Info.plist) contains only arm64 iOS device, arm64 iOS simulator, and arm64 macOS slices. Version 0.8.2 is a research baseline, not an approved runtime dependency.
+The inspected Swift SDK baseline is `convex-swift` 0.8.2 at `1c69cdd9723ffb5857f48aa360d079ed09d614fd`. Its [manifest](https://github.com/convex/convex-swift/blob/1c69cdd9723ffb5857f48aa360d079ed09d614fd/Package.swift) exposes `ConvexMobile`, with a bundled Rust XCFramework. Its [binary manifest](https://github.com/convex/convex-swift/blob/1c69cdd9723ffb5857f48aa360d079ed09d614fd/libconvexmobile-rs.xcframework/Info.plist) contains arm64 iOS device, arm64 iOS simulator, and arm64 macOS slices. Those are the approved initial platforms; our package owns its binary distribution rather than importing that SDK.
+
+The shared runtime is the [`convex` Rust crate](https://docs.rs/convex/latest/convex/). The official [`convex-mobile` bridge](https://github.com/convex/convex-mobile/blob/f1a074ac2a4581f6f10f274eb237de05bbc91092/rust/src/convex-mobile.udl) already exports query, subscription, mutation, action, authentication, and cancellation through UniFFI. Its inspected [lockfile](https://github.com/convex/convex-mobile/blob/f1a074ac2a4581f6f10f274eb237de05bbc91092/rust/Cargo.lock#L414-L435) pins `convex` 0.10.3; the Rust client's [0.10.4 changelog](https://github.com/convex/convex-rs/blob/1dbad3046e449224f8ec0bdd6b432ff6544ac2f9/CHANGELOG.md#L7-L12) includes a subscription leak fix. These are research snapshots, not an approved release dependency set.
 
 ## Proposed solution
 
-Use two generation stages with a small runtime adapter:
+Use two generation stages and reuse the existing Rust runtime beneath our Swift client:
 
 ```text
-Backend source + generated api/dataModel + tsconfig + locked dependencies
-    -> TypeScript semantic exporter (explicit backend task)
-    -> versioned convex-contract.json (committed or published artifact)
-    -> Swift generator (local executable, SwiftPM build/command plugins)
-    -> generated Swift declarations
-    -> typed client -> official ConvexMobile transport
+Backend repository: source + generated api/dataModel + tsconfig + locked dependencies
+    -> separately installed TypeScript contract exporter
+    -> versioned, runtime-neutral convex-contract.json
+Swift repository: local contract + Swift naming configuration
+    -> Swift generator (executable, SwiftPM build/command plugins)
+    -> generated request and result types
+    -> Convex.ConvexClient
+    -> private UniFFI bindings / convex-mobile bridge
+    -> official convex Rust client
 ```
 
-The exporter reads the resolved TypeScript contract, including inferred results. The intermediate representation separates backend tooling from application builds and gives separately maintained backend and Swift repositories a reviewable artifact.
+The exporter belongs to the TypeScript/backend toolchain. Swift tooling consumes its published format and contains no TypeScript source, compiler, or interpreter. The intermediate contract records backend semantics without Swift names or runtime-specific types; Swift naming and platform choices remain generator configuration.
 
-Proposed usage, inside a main-actor-isolated application method with an existing authenticated or unauthenticated SDK client:
+Proposed usage, on the main actor when creating the observable query:
 
 ```swift
-import SwiftConvex
+import Convex
 
-let convex = TypedConvexClient(wrapping: existingClient)
+let convex = ConvexClient(deploymentURL: deploymentURL)
+let list = API.Messages.List(channelID: channel.id)
 
-let messages = try await convex.fetch(
-    API.messages.list,
-    arguments: .init(channelID: channel.id)
+let messages = convex.observe(list)
+let snapshot = try await convex.fetch(list)
+
+let messageID = try await convex.execute(
+    mutation: API.Messages.Send(channelID: channel.id, body: "Hello")
 )
 
-let messageID = try await convex.mutate(
-    API.messages.send,
-    arguments: .init(channelID: channel.id, body: "Hello")
+try await convex.execute(
+    action: API.Notifications.Deliver(messageID: messageID)
 )
 
-try await convex.run(
-    API.notifications.deliver,
-    arguments: .init(messageID: messageID)
-)
-
-let updates = convex.subscribe(
-    to: API.messages.list,
-    arguments: .init(channelID: channel.id)
-)
+let updates = convex.snapshots(for: list)
 defer { updates.cancel() }
 
 for try await messages in updates {
@@ -106,13 +105,15 @@ for try await messages in updates {
 }
 ```
 
-These are proposed interfaces, not runnable examples today. The generated `send` reference determines the type of `messageID`; the caller cannot select an unrelated decoding type. Passing `API.messages.send` to `fetch` is a compile error. Passing an ID for another table to `channelID` is a compile error.
+These are proposed interfaces, not runnable examples today. `API.Messages.List` is a request type whose initializer captures its arguments; constructing it performs no I/O. Its static contract fixes the backend address, query kind, and result type. `API.Messages.Send` fixes the type of `messageID`. Passing a `Send` request to `observe`, `fetch`, or `snapshots(for:)`, or another table's ID to `channelID`, is a compile error.
+
+`messages` is a main-actor-isolated `@Observable` `Query<Output>` model. Its `state` distinguishes `.loading`, `.value(Output)`, and `.failed(Error)`; a successful nullable output remains distinct from loading. Reading state in a SwiftUI view participates in Observation tracking and updates the view as results arrive. Retain the model in stable view state, rather than recreating it in `body`. `fetch(_:)` supplies the explicit async one-shot operation.
 
 ## Detailed design
 
 ### 1. Extract the TypeScript contract, without executing backend modules
 
-The backend-side exporter uses the TypeScript compiler's semantic API to load the project's configuration and resolve its generated public `api` and `dataModel` declarations. It instantiates [`FunctionArgs` and `FunctionReturnType`](https://github.com/convex/convex-backend/blob/4b25436c8558ecd2c6094d8dc3a259572fd65cb0/npm-packages/convex/src/server/api.ts#L616-L697) for each concrete function reference instead of relying on deprecated phantom fields. It does not parse printed type strings with regular expressions or discover functions by executing their modules. This source snapshot is research evidence, not a tested npm compatibility pin.
+The separate backend-side exporter uses the TypeScript compiler's semantic API to load the project's configuration and resolve its generated public `api` and `dataModel` declarations. It instantiates [`FunctionArgs` and `FunctionReturnType`](https://github.com/convex/convex-backend/blob/4b25436c8558ecd2c6094d8dc3a259572fd65cb0/npm-packages/convex/src/server/api.ts#L616-L697) for each concrete function reference instead of relying on deprecated phantom fields. It does not parse printed type strings with regular expressions or discover functions by executing their modules. This source snapshot is research evidence, not a tested npm compatibility pin.
 
 Required extraction behavior:
 
@@ -130,7 +131,7 @@ Generating or refreshing Convex's own files remains a separate backend operation
 
 ### 2. Make the intermediate contract explicit
 
-`convex-contract.json` contains a format version, exporter and dependency versions, a reproducible source fingerprint, public function descriptors, table identities, and a graph of named/referenced value shapes. Shapes retain property presence, nullability, literals, unions, and Convex scalar kinds separately. Record whether types came from source-linked inference, validator-derived static declarations, or an explicitly dynamic position. Function source locations use repository-relative paths.
+`convex-contract.json` contains a format version, exporter and dependency versions, a reproducible source fingerprint, public function descriptors, table identities, and a graph of named/referenced value shapes. Shapes retain property presence, nullability, literals, unions, and Convex scalar kinds separately. Record whether types came from source-linked inference, validator-derived static declarations, or an explicitly dynamic position. Function source locations use repository-relative paths. The format contains no Swift identifiers, Swift declarations, or FFI configuration; other language generators can consume the same backend contract.
 
 Canonical ordering and content hashes make output stable across machines. Omit timestamps, absolute paths, credentials, deployment tokens, and machine-specific package paths. The fingerprint covers relevant source/declaration inputs, compiler options, exporter configuration, and dependency locks. Schema metadata itself may be sensitive; teams review what they publish.
 
@@ -161,7 +162,7 @@ The default exports the complete public contract. An explicit endpoint selection
 | Null-only result                | `ConvexNull`                                                    | Accept only null, including a backend void result normalized by Convex.                                          |
 | Explicitly allowed dynamic node | `ConvexValue`                                                   | A closed enum of Convex wire values, not Swift `Any`.                                                            |
 
-Generated coding implementations handle presence explicitly. Synthesized `decodeIfPresent` conflates missing and null, so it cannot implement all rows above. A package-owned `ConvexValueCodable` protocol supplies typed encoding and decoding for scalars, collections, and generated models. An SDK-facing `Decodable` envelope calls that codec recursively. This matters for outputs such as `[Double]`, whose standard `Decodable` conformance cannot decode Convex float envelopes. Integer, float, and bytes handling cannot depend on a property wrapper appearing at one particular nesting level.
+Generated coding implementations handle presence explicitly. Synthesized `decodeIfPresent` conflates missing and null, so it cannot implement all rows above. A package-owned `ConvexValueCodable` protocol supplies typed encoding and decoding for scalars, collections, and generated models. The runtime decoder calls that codec recursively on the native bridge's response payload. This matters for outputs such as `[Double]`, whose standard `Decodable` conformance cannot decode Convex float envelopes. Integer, float, and bytes handling cannot depend on a property wrapper appearing at one particular nesting level.
 
 `creationTime` stays a `Double` measured in milliseconds; any `Date` convenience is an explicit conversion. IDs do not conform to `ExpressibleByStringLiteral`. Interoperability with stored raw IDs uses a visibly unchecked initializer; no offline initializer claims to verify the table or document's existence.
 
@@ -173,40 +174,53 @@ Reject overlapping unions that cannot be normalized to disjoint cases, and recom
 
 Swift nominal typing cannot preserve every TypeScript structural assignment. Endpoint-local shapes get stable names derived from module/function/position; schema documents share their generated document type where their identity is established. Do not deduplicate unrelated shapes merely because their current fields happen to match.
 
-### 4. Bind operation, arguments, and output in each reference
+### 4. Bind function identity, arguments, and output in request values
 
-The runtime exposes separate `QueryReference<Arguments, Output>`, `MutationReference<Arguments, Output>`, and `ActionReference<Arguments, Output>` value types. Generated static members such as `API.messages.list` carry an immutable backend address and the associated types. Public call methods infer both types from that reference.
+Generate one immutable, `Sendable` request struct per function. `API.Messages.List` stores `channelID` directly and conforms to `QueryRequest`; `API.Messages.Send` conforms to `MutationRequest`; `API.Notifications.Deliver` conforms to `ActionRequest`. The three protocols share the request encoding contract, and each request fixes its `Output` associated type and static backend address. There is no independent reference and arguments pair at the call site.
 
-| Operation                  | Accepted reference | Result                                        |
-| -------------------------- | ------------------ | --------------------------------------------- |
-| `fetch(_:arguments:)`      | Query              | One decoded output, asynchronously.           |
-| `subscribe(to:arguments:)` | Query              | A throwing async sequence of query snapshots. |
-| `mutate(_:arguments:)`     | Mutation           | One decoded output, asynchronously.           |
-| `run(_:arguments:)`        | Action             | One decoded output, asynchronously.           |
+| Operation            | Accepted request  | Result                                                                       |
+| -------------------- | ----------------- | ---------------------------------------------------------------------------- |
+| `observe(_:)`        | `QueryRequest`    | A main-actor-isolated, live `@Observable` `Query<Request.Output>`.           |
+| `fetch(_:)`          | `QueryRequest`    | One decoded `Request.Output`, asynchronously.                                |
+| `snapshots(for:)`    | `QueryRequest`    | `QueryEvents<Request.Output>`, a throwing async sequence of query snapshots. |
+| `execute(mutation:)` | `MutationRequest` | One decoded `Request.Output`, asynchronously.                                |
+| `execute(action:)`   | `ActionRequest`   | One decoded `Request.Output`, asynchronously.                                |
 
-No result-type parameter or unconstrained generic return lets callers reinterpret a function. No-argument functions receive overloads without an `arguments:` label. Argument initializers require all required properties and give only genuinely optional properties an omission default. A required nullable property still requires an explicit argument.
+Each method is generic over the concrete request, rather than an unconstrained output type. The same query value can be reused for one-shot execution and observation. Constructing or copying it does not start a request or allocate a second arguments wrapper. No-argument functions use their request's empty initializer, such as `API.Health.Check()`. Initializers require every required field and give only genuinely optional fields an omission default. A required nullable field still requires an explicit argument.
 
-Reference construction must be public enough for generated code in a consumer module. Any manual construction is labeled unchecked and documented as bypassing contract verification; ordinary APIs do not accept raw strings. The type-safety guarantee applies to generated references, just as an explicit cast can bypass TypeScript's generated contract.
+The `execute` argument label selects the operation kind, enforced by its matching request protocol; an action cannot be passed as a mutation or vice versa. There is no unlabeled `execute` overload. These entry points replace the earlier client method names without compatibility aliases. Generated request names, namespaces, result types, and operation behavior remain unchanged.
 
-Use UpperCamelCase for types and lowerCamelCase for values, parameters, and namespace properties. Preserve module nesting and backend export vocabulary. Normalize acronym spellings deliberately, such as `channelID`, and retain an exact wire-name map. Escape Swift keywords and string literals. Detect normalization collisions, including case-insensitive file-name collisions, and require an explicit name override; do not add unstable numeric suffixes.
+The protocols are public so generated requests in a consumer module can conform. Handwritten conformances are an explicit trust boundary and do not prove agreement with the backend. Ordinary client methods accept only request values; they have no raw-string overload or result-type parameter.
+
+Use UpperCamelCase for generated namespace and request types, such as `API.Messages.List`, and lowerCamelCase for stored arguments and client methods. Preserve module nesting and backend export vocabulary. Normalize acronym spellings deliberately, such as `channelID`, and retain an exact wire-name map. Escape Swift keywords and string literals. Detect normalization collisions, including case-insensitive file-name collisions, and require an explicit name override; do not add unstable numeric suffixes.
 
 The root namespace is configurable so an application can import contracts for more than one backend. Naming overrides change Swift spelling only, never routing or wire keys. Generated declarations carry documentation describing units, presence semantics, and the backend source location.
 
-### 5. Reuse the official transport and define lifetime semantics
+### 5. Reuse the Rust runtime and own the Swift boundary
 
-`TypedConvexClient` wraps an existing `ConvexMobile.ConvexClient`, including the SDK's authenticated client subclass, so existing login, token refresh, logout, and connection state remain owned by the same SDK instance. Propose a main-actor-isolated wrapper; generated immutable models are `Sendable`. The SDK client itself has no `Sendable` conformance. Main-actor isolation alone is not yet proven sufficient across its nonisolated async methods. Establish a compiler-checked ownership boundary, including any necessary upstream annotations, before finalizing this API. Do not silence diagnostics with `@preconcurrency`, unchecked conformances, or unsafe isolation annotations.
+`ConvexClient` is our public client in the `Convex` module. It creates and owns one native client from a deployment URL. It neither wraps nor depends on `ConvexMobile`, and adopting applications replace the official Swift client rather than linking both front ends. Reuse the official `convex` crate for WebSocket transport, query tracking, synchronization, reconnect behavior, mutation semantics, and authentication refresh.
 
-Keep the codec bridge behind this adapter. The SDK accepts `[String: ConvexEncodable?]`, whose values implement `convexEncode() throws -> String`, and decodes results through an unconfigurable `JSONDecoder`. Supply our own argument-value conformers and generated/custom `Decodable` implementations through those public extension points. A missing argument key means omission; a present null-encoding value means null. Nested object keys must be escaped by our encoder, not interpolated into JSON.
+Use the existing `convex-mobile` Rust/UniFFI bridge as the starting boundary, with generated Swift bindings hidden behind an internal target. Pin its source revision, Rust dependency lockfile, UniFFI version, and generated bindings together. Do not expose UniFFI objects or callback protocols in the public Swift API. This is an FFI and packaging responsibility, not a new implementation of the Convex protocol.
 
-Decode scalar envelopes directly at every nesting level, without depending on the SDK's numeric property wrappers or Foundation's default `Data` representation. Always select the generic mutation/action overload, including for `ConvexNull`; the SDK's void overload independently decodes a `String?`. Avoid a generic JSON-tree allocation and encode/decode/encode round-trip for statically generated values. The per-argument JSON strings required by the SDK are an unavoidable adapter cost.
+The [native interface](https://github.com/convex/convex-mobile/blob/f1a074ac2a4581f6f10f274eb237de05bbc91092/rust/src/convex-mobile.udl) already exposes a one-shot `query`. Call that from `fetch(_:)` rather than reproducing subscribe-then-first in Swift. `observe(_:)` creates the Observable model and owns a subscription through the same snapshot-delivery boundary as `snapshots(for:)`. `execute(mutation:)` and `execute(action:)` call the corresponding native operations and decode the request's fixed output. Null is a successful value. Use the same native client for all operations and do not introduce a separate HTTP transport.
 
-The inspected SDK has no public one-shot query on the existing client. Once the upstream subscription prerequisite is resolved, `fetch` owns a subscription, returns its first result, and cancels it on success, failure, or task cancellation. A null result is a result, not an absence of an event. Fetching once does not introduce a second HTTP transport or claim a transaction shared with other queries. It must also work when another subscriber already has the same query cached.
+The bridge takes an argument-name map whose values are Convex-encoded JSON strings and returns Convex-encoded JSON payloads. Encode request fields directly: an absent key is omission; a present null-encoding value is null. Escape nested keys and preserve scalar envelopes at every nesting level. Decode responses once through our codec, preserving decoding errors and coding paths directly. No SDK-specific `ConvexEncodable` conformers, numeric wrappers, or decoding-outcome workaround remain. Avoid a generic JSON-tree round-trip for statically typed requests; the strings and FFI transfers required by this bridge are measurable boundary costs.
 
-`subscribe` returns a `QuerySubscription<Output>` async sequence with explicit `cancel()`. Each iterator owns its underlying subscription; task cancellation, iterator release, explicit cancellation, and terminal error tear it down. Registration/cancellation races must cancel a subscription even if its SDK token arrives after cancellation. A retained subscription may outlive an early loop exit, so the documented pattern uses `defer` when deterministic teardown is needed.
+The inspected bridge [parses arguments with `expect`](https://github.com/convex/convex-mobile/blob/f1a074ac2a4581f6f10f274eb237de05bbc91092/rust/src/lib.rs#L354-L371). Before release, that boundary must return a structured error for invalid JSON or invalid Convex values instead of panicking. Prefer upstream bridge fixes; retain only small, documented binding/ownership patches if needed. Do not fork the sync engine or replace failures with retries.
 
-Query updates are snapshots, not an event log. Use a bounded newest-snapshot buffer and document coalescing for a slow consumer. Reconnection and authentication transitions follow the SDK; a publisher's terminal error remains terminal, with explicit resubscription by the caller. Do not turn failures into empty collections or invent automatic action retries. The inspected SDK does not propagate Swift task cancellation into mutation/action execution. Initially, cancellation of those calls does not promise prompt completion or server abort; it never implies rollback.
+Make `ConvexClient` safely shareable through compiler-checked `Sendable` storage backed by isolated native ownership. Calls must be usable from the main actor without making the library main-actor-only. Native callbacks arrive on Rust runtime threads; serialized Swift lifetime state owns their delivery, cancellation, and teardown. Audit generated FFI concurrency assumptions and prove them under Swift 6. Do not add unchecked conformances or unsafe isolation annotations merely to suppress diagnostics.
 
-Use ordinary `async throws`; transport failures and user-thrown `ConvexError` payloads are not a statically enumerated TypeScript throws contract. Preserve the server payload available through the SDK and distinguish contract-decoding failures with endpoint and coding-path context. The SDK flattens thrown subscription decoding errors into a message, so use an internal `Decodable` outcome envelope that captures decoding success or failure as a value; the adapter then surfaces the original failure. This avoids claiming diagnostic information the SDK otherwise discards. Avoid logging argument values, response bodies, or credentials by default.
+`observe(_:)` is a synchronous main-actor factory for `Query<Output>`, implemented with Swift's built-in Observation support. The model begins loading and owns one task consuming query snapshots. Each received result replaces its state with `.value`; a terminal failure becomes `.failed`, never an empty or fabricated value. All observable mutations occur on the main actor. Explicit cancellation or model deinitialization cancels the task and subscription, without a task-to-model retain cycle. Reusing a model keeps its subscription; changing a request creates a new model. The model's lifetime follows its owner, not mere view visibility.
+
+`snapshots(for:)` returns a `QueryEvents<Output>` async sequence with synchronous, idempotent `cancel()`. Creating it performs no network operation; its single iterator starts one subscription. Use a new `snapshots(for:)` call for another independent consumer. Establish buffering and callback ownership before native registration can emit an initial value. Task cancellation, iterator release, explicit cancellation, and terminal error tear down that subscription. If cancellation wins the registration race, cancel the native handle as soon as it arrives. After cancellation takes effect, discard buffered and late native updates instead of forwarding them to the consumer. A retained sequence can outlive an early loop exit, so use `defer` when deterministic teardown is needed.
+
+Query snapshots represent current results, not a durable event log. Use a bounded newest-snapshot buffer and document coalescing for a slow consumer. Preserve callback order before coalescing. Forward reconnection to the Rust client; a terminal error ends this sequence and cancels its handle. Do not silently resubscribe, replace failures with empty collections, or invent automatic action retries.
+
+For one-shot calls, connect Swift task cancellation to the owned native future where the pinned bridge permits it. Completion and cancellation must settle the Swift waiter exactly once; if cancellation wins, it throws `CancellationError` rather than returning a fabricated result. Prove resource release independently of that Swift result. The bridge's cancellation behavior is an implementation gate, not an inherited Swift SDK guarantee. In particular, a mutation or action may execute after the caller cancels, so canceling a wait never implies server rollback.
+
+Authentication also crosses our boundary. Expose a Swift `Sendable` token provider with an async, throwing token lookup that receives `forceRefresh` and returns an optional token. `setAuthenticationProvider(_:)` installs it through the bridge's existing auth callback; passing nil clears it. The application owns login UI and credentials. Preserve refresh on reconnect, serialize provider replacement/logout, and prevent a late result from a retired provider from restoring an old session. Provider state and connection state must be observable without importing the official Swift SDK; retrieving a token does not prove server authorization. Provider-specific login packages are separate integrations.
+
+Use ordinary `async throws`; transport failures and user-thrown `ConvexError` payloads are not a statically enumerated TypeScript throws contract. Preserve native error categories and application payloads, and distinguish local contract-decoding failures with endpoint and coding-path context. Do not log arguments, response bodies, or credentials by default.
 
 ### 6. Give plugins and macros separate responsibilities
 
@@ -217,49 +231,53 @@ The explicit `generate-convex` command plugin invokes the same generator for tea
 Proposed workflow:
 
 ```sh
-# Backend CI or development, using the lockfile-installed exporter.
-convex-swift-export --project convex/tsconfig.json --output contracts/convex-contract.json
-convex-swift-export --project convex/tsconfig.json --output contracts/convex-contract.json --check
+# In the backend repository, using its lockfile-installed TypeScript exporter.
+convex-contract-export --project convex/tsconfig.json --output contracts/convex-contract.json
+convex-contract-export --project convex/tsconfig.json --output contracts/convex-contract.json --check
 
 # Swift consumer choosing checked-in generation instead of the build plugin.
 swift package --allow-writing-to-package-directory generate-convex
-swift package generate-convex --check
+swift package --allow-writing-to-package-directory generate-convex --check
 ```
 
-These command names are proposed. Neither Swift plugin installs or invokes Node, accesses a deployment, or needs a deploy key. The exporter is a backend development dependency. A contract can be copied or published between repositories; only its local snapshot is read during Swift generation.
+These command names are proposed. The exporter is a separately distributed backend development dependency with its own source, compiler dependencies, and tests. Swift tooling includes none of that TypeScript implementation. Neither Swift plugin installs or invokes Node, accesses a deployment, or needs a deploy key. Backend automation may explicitly run export before a Swift build, but ordinary Swift generation reads only the local contract snapshot.
+
+SwiftPM grants command-plugin permissions before inspecting arguments, so even the non-writing `--check` invocation requires the plugin's declared write permission. The generator executable's direct `--check` mode needs no plugin permission and does not modify files.
 
 Provide SwiftPM package-target integration and Xcode build-tool integration through the appropriate plugin host APIs. Also support generating a standalone Swift contract package consumed by an Xcode application; this avoids requiring every application target to host a generator. Test both hosts, including a clean build, incremental regeneration, and file removal.
 
-Do not require macros in the first generated-client implementation. The generator already knows every property and can emit complete, inspectable declarations. Expanding a second layer of macros would add a SwiftSyntax dependency and another diagnostic boundary without recovering more backend information. An optional `@ConvexModel` macro could later share coding synthesis for handwritten models, but it would not verify backend equivalence and is outside this proposal's delivery scope.
+No custom macro package is required. The Observable query model uses the system `@Observable` macro and Observation framework, available at the approved iOS 17/macOS 14 floors. Endpoint/model generation remains explicit source emission and adds no SwiftSyntax dependency. An optional custom `@ConvexModel` macro for handwritten coding synthesis is outside this proposal's delivery scope.
 
 ### 7. Adapt the package template at implementation time
 
-Use `swift-convex` as the package identity and `SwiftConvex` as the initial public runtime product/module, avoiding a module-name collision with `ConvexMobile`. Keep the manifest at the repository root. Add the generator executable, build plugin, and command plugin as separate targets because they run on the build host rather than in the application.
+Use `swift-convex` as the package identity and `Convex` as the public product/module, with `ConvexClient` as its client type. Keep the manifest at the repository root. Add internal native bindings and binary targets, plus separate host targets for the Swift generator, build plugin, and command plugin. Keep the generator's dependency graph independent of the native runtime so contract generation does not load or link an application client.
 
-Keep the exporter under `tools/contract-exporter/` with its own locked backend-tool dependencies and extraction fixtures. It introduces TypeScript/Node to the development workflow, not to the runtime library or ordinary Swift application build. Distribution/versioning of the exporter and its format compatibility must be coordinated with the Swift generator.
+Keep TypeScript implementation in the separately distributed backend exporter, not under this Swift package's `tools/`. Its repository owns extraction fixtures and a representative Convex backend. This repository owns the neutral format specification/fixtures and the Swift consumer of that format. Coordinate compatibility through the format version and an integration matrix, rather than embedding TypeScript tooling or requiring the two packages to share a release number.
 
-Start the transport-backed product with arm64 iOS device/simulator and arm64 macOS support. The template's iOS 17 and macOS 14 floors exceed the inspected SDK's declared floors and remain the proposed application floors. Intel Mac/simulator, universal Mac, Catalyst, Linux, watchOS, tvOS, and visionOS are unsupported by the inspected binary distribution. Do not inherit claims for them from the template. Keep the generator target graph independent of `ConvexMobile`; portable generator checks do not establish transport portability.
+Build the Rust bridge and its generated bindings as a matched release artifact. Publish a checksummed XCFramework with arm64 iOS device, arm64 iOS simulator, and arm64 macOS slices, and reference it through SwiftPM's binary-target mechanism. Application builds require neither Cargo nor UniFFI generation; maintainers' native release builds do. Record source revisions, `Cargo.lock`, compiler/SDK versions, deployment floors, build commands, and artifact checksums so a binary can be traced to its source and rebuilt. Verify distribution through the same dependency path consumers use.
 
-After approval, instantiate and adapt the remaining template tooling: Swift 6.4 tools mode, strict concurrency, Swift Testing, public DocC, external consumer tests, mise/hk formatting and gates, and Knope's single-package `v<version>` tags. Select and lock compatible SDK/compiler versions through the feasibility work. Do not ship the template's example library as a placeholder product.
+Arm64 iOS/macOS support and no mandatory macros are approved in the review. Retain the template's proposed iOS 17 and macOS 14 application floors. Intel Mac/simulator, universal Mac, Catalyst, Linux runtime, watchOS, tvOS, and visionOS are outside the initial verified matrix. Portable generator checks do not establish runtime portability.
 
-Record the supported SDK release range, binary architecture matrix, and upstream-fix provenance before publishing. The SDK is Apache-2.0 licensed and bundles Rust code; review required notices and binary redistribution obligations. No project license or public release is established by this draft.
+After the proposal is settled, adapt the remaining template tooling: Swift 6.4 tools mode, strict concurrency, Swift Testing, public DocC, external consumer tests, mise/hk formatting and gates, and Knope's single-package `v<version>` tags. Add native build/packaging gates for maintainers. Do not ship the template's example library as a placeholder product.
 
-[README.md](../README.md) gains verified installation and generation instructions only when they work. [VISION.md](../VISION.md) gains an implementation claim only after acceptance. The codec, generation format, and compatibility matrix need current reference documentation when implementation starts; they presently have no source outside this draft. No architecture decision is marked accepted in this change.
+Choose and lock a compatible Rust runtime/bridge combination that includes the subscription leak fix recorded in `convex` 0.10.4, then verify it; do not ship the inspected 0.10.3 lockfile unchanged. The maintenance cost now includes FFI generation, Swift concurrency/lifetime code, binary size/downloads, and native release CI. Review Apache-2.0 notices and the bundled Rust dependencies' redistribution obligations. No project license or public release is established by this draft.
+
+[README.md](../README.md) gains verified installation and generation instructions only when they work. [VISION.md](../VISION.md) gains an implementation claim only after acceptance. The codec, generation format, native artifact provenance, and compatibility matrix need current reference documentation when implementation starts; they presently have no source outside this draft. No architecture decision is marked accepted in this change.
 
 ### 8. Prove the contract before release
 
 Implementation proceeds through these dependent proofs, all within the proposal's scope:
 
-1. Extract a representative backend containing an inferred result without a return validator, a schema document, a branded ID, optional/null fields, a union, and all three callable function kinds. Compare the resolved exported contract with TypeScript's public helper types. Establish the supported compiler/Convex versions.
-2. Establish a supported SDK revision that fixes the reported publisher races and permits a safe Swift 6 ownership boundary. Then round-trip each supported Convex scalar and composite through its public interfaces: Int64 boundaries, nonfinite doubles, signed zero, bytes, omitted versus null fields, escaped object keys, nested arrays/records, and malformed payloads. A narrower SDK path is a blocker to the advertised value set, not permission to weaken types silently.
-3. Compile an external Swift consumer against generated declarations. Wrong argument labels/types, missing required fields, wrong-table IDs, wrong operation kind, and references to internal functions must fail compilation for the intended reason. Regeneration after backend changes must update or remove the corresponding declarations.
-4. Exercise plugin and runtime behavior: deterministic generation, unsupported-type diagnostics, stale artifact detection, clean offline generation after dependency resolution, Xcode/SwiftPM builds, authentication, live query updates, one-shot fetch, task cancellation, and subscription teardown against a disposable backend.
+1. In the backend exporter, extract a representative project containing an inferred result without a return validator, a schema document, a branded ID, optional/null fields, a union, and all three callable function kinds. Compare the exported contract with TypeScript's public helper types. Establish compiler/Convex versions and give the Swift generator only the resulting neutral artifact.
+2. Build the pinned Rust runtime/bridge and generated bindings for every approved slice. Prove Swift 6 ownership and native callback ordering. Round-trip supported scalar/composite values across the FFI boundary, including Int64 boundaries, nonfinite doubles, signed zero, bytes, omitted/null fields, escaped keys, and nested collections. Invalid payloads must fail without a native panic. Verify the binary checksum/provenance and subscription leak fix.
+3. Compile an external Swift consumer using `import Convex`, `ConvexClient`, and constructed requests such as `API.Messages.List(channelID:)`. Wrong initializer labels/types, missing required fields, wrong-table IDs, wrong operation kind, and internal-function requests must fail compilation for the intended reason. Regeneration must update or remove changed request declarations. Reusing a query request with `observe(_:)`, `fetch(_:)`, and `snapshots(for:)` must work. Exercise Observation tracking through loading, live values, a successful null, and errors, including cancellation and model deinitialization.
+4. Exercise both plugin hosts and the Rust-backed runtime: deterministic generation, unsupported-type diagnostics, drift checks, generation without TypeScript or Cargo installed, clean offline builds after dependency resolution, native one-shot queries, cached initial subscription values, early cancellation, callback/cancel races, reconnect, auth refresh and provider replacement/logout, task cancellation, and teardown against a disposable backend.
 
-Use Swift Testing and the template's real tagged-dependency `Consumer/` harness for public API verification. Snapshot tests supplement compiled consumers; they cannot establish type safety alone. Backend integration checks run in an explicitly configured CI job with isolated test data and secrets, never as part of a consumer's build plugin.
+Use Swift Testing and the template's tagged-dependency `Consumer/` harness for public API verification. Snapshot tests supplement compiled consumers; they cannot establish type safety alone. Native bridge tests cover malformed inputs and lifetime races. Backend integration checks use a versioned fixture from the exporter project and run in an explicitly configured CI job with isolated test data and secrets, never inside a consumer's build plugin.
 
 ## Compatibility
 
-There are no existing users of this package. Adoption wraps the existing SDK client; it does not require renaming backend functions or changing stored documents. Existing string-based calls can coexist while an application migrates, but they remain outside the typed guarantee.
+There are no existing users of this package. Adoption replaces the official Swift SDK with `Convex` and `ConvexClient`; the two Swift clients are not intended to coexist in one application. Migrate string calls to generated request values and adapt authentication providers to our token-provider boundary. There is no compatibility wrapper around the old Swift client. Backend function names and stored documents do not change, and the underlying Convex Rust runtime remains shared.
 
 Type safety is relative to the generated snapshot and supported value set. It cannot prove deployment freshness, authorization, ID existence, server business rules, or correctness of a backend type assertion. A deployed incompatible change may still cause a runtime decoding or routing error.
 
@@ -269,27 +287,30 @@ Backend CI checks snapshot freshness. Swift CI checks snapshot-to-source consist
 
 Backend maintainers run a pinned exporter and distribute the resulting contract. Swift developers add the runtime plus either a build plugin or generated sources. They stop maintaining parallel endpoint dictionaries and result structs for adopted functions, and adapt to nominal types where TypeScript previously allowed structural assignment.
 
-The cost is a backend tooling dependency and generated-artifact review. The benefit is preserving inferred contracts without requiring return validators everywhere. Plugin-based generation removes generated-source churn; checked-in generation makes declarations directly reviewable. Both paths use the same intermediate contract and emitter.
+The application cost is a generated-artifact workflow and the native runtime dependency. Library maintainers additionally own the Swift FFI boundary and binary release pipeline; backend maintainers install a separate TypeScript exporter. Neither TypeScript nor Rust build tooling is bundled into the Swift generator or required for an ordinary application build. Plugin-based generation removes generated-source churn; checked-in generation makes declarations directly reviewable. Both paths consume the same neutral contract.
 
 ## Scope
 
-This proposal defines one coherent feature: a generated, typed client boundary backed by the official Swift SDK. Its delivery includes the semantic exporter, intermediate format, value codecs, nominal models/references, typed operations and subscriptions, generator, both plugin workflows, compatibility documentation, and the proofs above.
+This proposal defines one coherent feature: a generated, typed Swift client backed by the same Rust runtime as the official mobile client. Delivery includes the separate backend exporter, neutral format, Swift codecs and request/result types, live Observable queries, async query snapshots, one-shot operations, authentication/lifetime boundary, native artifact distribution, generator, both plugin workflows, documentation, and the proofs above.
 
-This commit delivers the proposal and template-derived documentation foundation only. Implementation requires the human to settle the proposal and move it to `awaiting-implementation`.
+The human approved implementation after incorporation of the Observable query integration requested in the final review. Successful implementation and human acceptance remain separate gates.
+
+The human accepted the implementation on 2026-11-18 and authorized merging PR #1 and cleaning up its branches and disposable backend. Delivery is merge-only; a versioned Swift library release and npm publication remain separately authorized operations. The native artifact remains available because the package depends on it.
 
 ### Out of scope
 
-- A new networking/sync engine or a Linux transport, because preserving Convex runtime semantics is already the SDK's responsibility.
+- A new networking/sync engine or Linux runtime support, because this package reuses the official Rust client's protocol behavior and verifies only the approved initial platforms.
 - Swift backend authoring, internal/admin function execution, and HTTP action client generation, because those are different contracts from the public generated Convex API.
-- SwiftUI wrappers, optimistic-update caches, and automatic pagination controllers, because they add state-management behavior beyond typed function calls. Pagination-shaped arguments and results remain ordinary supported contracts.
-- Mandatory macros or handwritten schema DSLs, because neither is needed to derive this contract and both create another representation to maintain.
+- Additional SwiftUI property wrappers, optimistic-update caches, and automatic pagination controllers. The standard Observation-backed live query model is in scope; pagination-shaped arguments and results remain ordinary supported contracts.
+- Custom endpoint/model macro packages or handwritten schema DSLs, because neither is needed to derive the contract. The built-in Observation macro is part of the approved live query model.
+- Coexistence or API compatibility with the official Swift SDK, because this package replaces that front end while retaining the shared Rust engine.
 - Complete translation of arbitrary TypeScript, because the generator supports concrete Convex wire contracts and explicitly diagnoses the rest.
 
 ## Preview
 
-The design preview is this draft and its representative Swift call sites. No implementation is claimed.
+Design review used this proposal and its representative Swift call sites.
 
-The implementation preview is a private prerelease package plus the external `Consumer/` fixture targeting a disposable Convex backend. The reviewer generates a contract, compiles a valid call, observes an invalid call fail, receives a live update, and cancels a subscription. Provide access through the repository's private branch/artifact and environment-supplied deployment configuration. Remove the disposable deployment and credentials after review; keep credential-free fixtures as regression coverage.
+Implementation review used the private package branch, native artifact, and external `Consumer/` fixture with a disposable Convex backend. Verification covered valid and invalid compiled calls, live updates, and subscription cancellation. After acceptance, remove the feature and temporary review-baseline branches and reset the disposable backend, including its test data and generated credentials. Keep the credential-free fixtures as regression coverage and retain the native artifact required by the package.
 
 ## Policies and decisions checked
 
@@ -297,7 +318,7 @@ None exist in this newly initialized repository. The template's [proposal lifecy
 
 ## Future directions
 
-An optional model-coding macro could help teams writing custom Swift boundary types after the generated codec contract stabilizes. SwiftUI observation, richer pagination, and an independently verified additional transport would each need their own proposal. None is necessary to prove generated type-safe calls on the initial platforms.
+An optional model-coding macro could help teams writing custom Swift boundary types after the generated codec contract stabilizes. Additional SwiftUI conveniences, richer pagination, and an independently verified additional transport would each need their own proposal.
 
 ## Alternatives considered
 
@@ -306,11 +327,11 @@ An optional model-coding macro could help teams writing custom Swift boundary ty
 | Source-semantic export plus local Swift generation   | Preserves TypeScript inference and separates backend tooling from application builds.      | Requires a compiler compatibility matrix and a backend export step. Recommended.                                                                                                        |
 | `function-spec` or OpenAPI as the only input         | Simpler discovery; works without backend source; validators are explicit runtime evidence. | Missing validators lose inferred types; an HTTP-oriented client also does not supply live query semantics. Suitable for a validator-complete alternative, not the default parity claim. |
 | Handwritten Swift declarations with macros           | Pleasant Swift syntax and less local coding boilerplate.                                   | Duplicates the contract and cannot detect backend drift on its own. Useful only as an explicitly unchecked/custom boundary.                                                             |
-| Run TypeScript discovery inside a Swift build plugin | One apparent build step in a monorepo.                                                     | Couples Swift builds to Node, backend source/configuration, and potentially deployment work. Reject for reproducibility and separate-repository use.                                    |
+| Run TypeScript discovery inside a Swift build plugin | One apparent build step in a monorepo.                                                     | Couples Swift builds to Node, backend source/configuration, and potentially deployment work. Rejected in favor of the reviewed backend-exported neutral contract.                       |
+| Wrap `ConvexMobile` and retain its client instance   | Reuses the existing Swift authentication and Combine integration with less binding work.   | Rejected in review. Direct Rust reuse provides our own public API and native query path without the SDK's publisher layer, at the cost of owning Swift FFI and binary releases.         |
 
 ## Open questions
 
-- [NEEDS CLARIFICATION: Approve the recommended source-semantic exporter and local-contract workflow, accepting a backend TypeScript tooling dependency, or prefer a validator-required deployment export with explicitly reduced inference parity?]
-- [NEEDS CLARIFICATION: Approve the proposed initial boundary of arm64 iOS/macOS transport support and no mandatory macros, or identify an additional platform or macro use case that must be part of the first supported contract?]
+None. The reviewed API uses `Convex`, `ConvexClient`, constructed requests, Observable `observe(_:)`, one-shot `fetch(_:)`, `snapshots(for:)`, `execute(mutation:)`, and `execute(action:)`. Generated request names and namespaces remain unchanged. The backend exports a neutral contract through separate TypeScript tooling, and the runtime reuses the official Rust client. The approved initial scope is arm64 iOS/macOS without a custom macro package.
 
-The codec and compiler-version feasibility items are engineering proofs, not questions the user must answer from memory. They remain implementation gates; their failure requires an explicit design revision.
+The human explicitly authorized the transition to `awaiting-implementation` after the [Observable query comment](https://github.com/markmals/swift-convex/pull/1#discussion_r4607336963) was incorporated. Native ownership, Observation lifetime, codecs, artifact distribution, and compiler-version compatibility remain engineering verification gates. A contradiction that changes the approved behavior requires a design revision rather than a silent reduction in scope.
