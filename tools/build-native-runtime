@@ -1,0 +1,176 @@
+#!/usr/bin/env bash
+# Builds the pinned native runtime (RustRuntime) for arm64 macOS, arm64 iOS, and arm64 iOS
+# Simulator; regenerates the matching Swift bindings in Sources/ConvexNativeBindings; and
+# assembles .build/native/ConvexRuntimeFFI.xcframework plus its build record.
+#
+# Requires rustup (https://rustup.rs) and Xcode's command-line tools. It installs the pinned
+# toolchain and Apple targets through rustup when missing. PATH is limited to rustup and the
+# system/Xcode tools so that no Homebrew or other package-manager binary affects the artifact.
+# Select a different Xcode with DEVELOPER_DIR.
+set -euo pipefail
+
+root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+crate="$root/RustRuntime"
+output="$root/.build/native"
+bindings_dir="$root/Sources/ConvexNativeBindings"
+framework="ConvexRuntimeFFI"
+bindings_module="ConvexNativeBindings"
+library="libconvex_runtime.a"
+targets=(aarch64-apple-darwin aarch64-apple-ios aarch64-apple-ios-sim)
+upstream_revision="f1a074ac2a4581f6f10f274eb237de05bbc91092"
+macos_deployment_target="14.0"
+ios_deployment_target="17.0"
+
+cargo_home="${CARGO_HOME:-$HOME/.cargo}"
+export CARGO_HOME="$cargo_home"
+export PATH="$cargo_home/bin:/usr/bin:/bin:/usr/sbin:/sbin"
+if ! command -v rustup >/dev/null; then
+    echo "error: rustup was not found in $cargo_home/bin; install it from https://rustup.rs" >&2
+    exit 1
+fi
+
+toolchain="$(sed -n 's/^channel = "\(.*\)"$/\1/p' "$crate/rust-toolchain.toml")"
+if [[ -z "$toolchain" ]]; then
+    echo "error: no channel in RustRuntime/rust-toolchain.toml" >&2
+    exit 1
+fi
+export RUSTUP_TOOLCHAIN="$toolchain"
+if ! rustup toolchain list | grep -q "^$toolchain-"; then
+    rustup toolchain install "$toolchain" --profile minimal
+fi
+rustup target add --toolchain "$toolchain" "${targets[@]}"
+
+# Deterministic inputs: fixed deployment floors, archive dates, and machine-independent paths.
+# Source paths (this crate, the Cargo registry, and the toolchain's rust-src, which panic
+# locations reference) are remapped so the archives contain no machine-specific paths.
+export MACOSX_DEPLOYMENT_TARGET="$macos_deployment_target"
+export IPHONEOS_DEPLOYMENT_TARGET="$ios_deployment_target"
+export ZERO_AR_DATE=1
+export CARGO_INCREMENTAL=0
+rust_source="$(rustc --print sysroot)/lib/rustlib/src/rust"
+rust_commit="$(rustc -vV | sed -n 's/^commit-hash: //p')"
+path_maps=(
+    "$crate=/convex-swift-runtime"
+    "$cargo_home=/cargo"
+    "$rust_source=/rustc/$rust_commit"
+)
+recorded_path_maps=(
+    "<RustRuntime>=/convex-swift-runtime"
+    "<CARGO_HOME>=/cargo"
+    "<sysroot>/lib/rustlib/src/rust=/rustc/$rust_commit"
+)
+RUSTFLAGS=""
+CFLAGS=""
+for map in "${path_maps[@]}"; do
+    RUSTFLAGS+="--remap-path-prefix=$map "
+    CFLAGS+="-ffile-prefix-map=$map "
+done
+export RUSTFLAGS="${RUSTFLAGS% }"
+export CFLAGS="${CFLAGS% }"
+
+cd "$crate"
+
+build_commands=()
+for target in "${targets[@]}"; do
+    command=(cargo build --locked --release --lib --target "$target")
+    build_commands+=("${command[*]}")
+    "${command[@]}"
+done
+
+# Generate bindings from the macOS archive itself, so they describe the exact exported ABI.
+generated="target/uniffi-swift"
+rm -rf "$generated"
+bindgen_command=(
+    cargo run --locked --quiet --features bindgen --bin uniffi-bindgen-swift --
+    --swift-sources --headers --modulemap --metadata-no-deps
+    --module-name "$framework" --modulemap-filename module.modulemap
+    "target/aarch64-apple-darwin/release/$library" "$generated"
+)
+"${bindgen_command[@]}"
+
+mkdir -p "$bindings_dir"
+cp "$generated/$bindings_module.swift" "$bindings_dir/$bindings_module.swift"
+
+# Headers live in a module-named subdirectory so Xcode can copy several XCFrameworks' headers
+# into one include directory without their module maps colliding.
+headers="$crate/target/xcframework-headers"
+rm -rf "$headers"
+mkdir -p "$headers/$framework"
+cp "$generated/$framework.h" "$generated/module.modulemap" "$headers/$framework/"
+
+xcframework="$output/$framework.xcframework"
+rm -rf "$xcframework"
+mkdir -p "$output"
+create_arguments=()
+for target in "${targets[@]}"; do
+    create_arguments+=(-library "target/$target/release/$library" -headers "$headers")
+done
+xcodebuild -create-xcframework "${create_arguments[@]}" -output "$xcframework" >/dev/null
+
+sha256() {
+    shasum -a 256 "$1" | cut -d ' ' -f 1
+}
+
+locked_version() {
+    sed -n "/^name = \"$1\"$/{n;s/^version = \"\(.*\)\"$/\1/p;}" "$crate/Cargo.lock" | head -n 1
+}
+
+slices="[]"
+for target in "${targets[@]}"; do
+    slices="$(
+        jq --arg target "$target" --arg library "$library" \
+            --arg sha256 "$(sha256 "target/$target/release/$library")" \
+            '. + [{rustTarget: $target, library: $library, sha256: $sha256}]' <<<"$slices"
+    )"
+done
+
+source_revision="$(git -C "$root" rev-parse HEAD 2>/dev/null || echo unknown)"
+source_changes="$(git -C "$root" status --porcelain -- RustRuntime tools/build-native-runtime 2>/dev/null || true)"
+
+jq -n \
+    --arg framework "$framework" \
+    --arg bindingsModule "$bindings_module" \
+    --arg crateVersion "$(locked_version convex-swift-runtime)" \
+    --arg convexVersion "$(locked_version convex)" \
+    --arg uniffiVersion "$(locked_version uniffi)" \
+    --arg rustlsVersion "$(locked_version rustls)" \
+    --arg tokioVersion "$(locked_version tokio)" \
+    --arg upstreamRevision "$upstream_revision" \
+    --arg sourceRevision "$source_revision" \
+    --argjson sourceModified "$([[ -n "$source_changes" ]] && echo true || echo false)" \
+    --arg cargoLockSHA256 "$(sha256 Cargo.lock)" \
+    --arg rustc "$(rustc -vV)" \
+    --arg cargo "$(cargo -V)" \
+    --arg xcode "$(xcodebuild -version | tr '\n' ' ' | sed 's/ $//')" \
+    --arg developerDir "$(xcode-select -p)" \
+    --arg macosSDK "$(xcrun --sdk macosx --show-sdk-version) ($(xcrun --sdk macosx --show-sdk-build-version))" \
+    --arg iosSDK "$(xcrun --sdk iphoneos --show-sdk-version) ($(xcrun --sdk iphoneos --show-sdk-build-version))" \
+    --arg simulatorSDK "$(xcrun --sdk iphonesimulator --show-sdk-version) ($(xcrun --sdk iphonesimulator --show-sdk-build-version))" \
+    --arg macosDeploymentTarget "$macos_deployment_target" \
+    --arg iosDeploymentTarget "$ios_deployment_target" \
+    --argjson pathMaps "$(printf '%s\n' "${recorded_path_maps[@]}" | jq -R . | jq -s .)" \
+    --arg bindingsSHA256 "$(sha256 "$bindings_dir/$bindings_module.swift")" \
+    --arg headerSHA256 "$(sha256 "$headers/$framework/$framework.h")" \
+    --arg modulemapSHA256 "$(sha256 "$headers/$framework/module.modulemap")" \
+    --arg bindgenCommand "${bindgen_command[*]}" \
+    --argjson buildCommands "$(printf '%s\n' "${build_commands[@]}" | jq -R . | jq -s .)" \
+    --argjson slices "$slices" \
+    '{
+        artifact: $framework,
+        crate: {name: "convex-swift-runtime", version: $crateVersion},
+        upstream: {repository: "https://github.com/get-convex/convex-mobile", path: "rust", revision: $upstreamRevision},
+        dependencies: {convex: $convexVersion, uniffi: $uniffiVersion, rustls: $rustlsVersion, tokio: $tokioVersion},
+        source: {repository: "swift-convex", revision: $sourceRevision, nativeSourcesModified: $sourceModified, cargoLockSHA256: $cargoLockSHA256},
+        toolchain: {rustc: $rustc, cargo: $cargo, xcode: $xcode, developerDir: $developerDir},
+        sdks: {macosx: $macosSDK, iphoneos: $iosSDK, iphonesimulator: $simulatorSDK},
+        deploymentTargets: {macOS: $macosDeploymentTarget, iOS: $iosDeploymentTarget},
+        remappedPaths: {note: "Passed as --remap-path-prefix to rustc and -ffile-prefix-map to clang", maps: $pathMaps},
+        commands: {build: $buildCommands, bindings: $bindgenCommand},
+        bindings: {module: $bindingsModule, path: ("Sources/" + $bindingsModule + "/" + $bindingsModule + ".swift"), sha256: $bindingsSHA256},
+        ffiModule: {name: $framework, headerSHA256: $headerSHA256, modulemapSHA256: $modulemapSHA256},
+        slices: $slices
+    }' >"$output/$framework.build.json"
+
+echo "Built $xcframework"
+echo "Regenerated $bindings_dir/$bindings_module.swift"
+echo "Recorded $output/$framework.build.json"

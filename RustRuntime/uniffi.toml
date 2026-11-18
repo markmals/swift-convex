@@ -1,0 +1,5 @@
+[bindings.swift]
+# Swift module containing the generated bindings (Sources/ConvexNativeBindings).
+module_name = "ConvexNativeBindings"
+# Clang module inside ConvexRuntimeFFI.xcframework that declares the C ABI.
+ffi_module_name = "ConvexRuntimeFFI"

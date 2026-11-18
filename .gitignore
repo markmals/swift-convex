@@ -1,0 +1,54 @@
+# macOS
+.DS_Store
+Thumbs.db
+
+# Editor / IDE
+.vscode/
+.idea/
+
+# SwiftPM and xcodebuild output, here and in Consumer/. `mise run build:platforms` and
+# `mise run docs` keep Xcode's derived data in .build/xcode. The root Package.resolved is the
+# lockfile and is committed once the library has dependencies; the consumer fixture's pins a
+# scratch snapshot, so it is never committed.
+.build/
+/Packages
+.swiftpm/
+/Consumer/Package.resolved
+xcuserdata/
+DerivedData/
+.netrc
+
+# The Workbench package link: machine-local, recreated by `mise install`.
+.workbench
+
+# mise — machine-local overrides and their lockfiles. mise.toml and mise.lock are committed.
+mise.local.toml
+mise.*.local.toml
+.mise.local.toml
+.mise/locks/mise.local/
+
+# hk — machine-local hook overrides. hk.pkl is committed.
+hk.local.pkl
+
+# Beads / Dolt files (added by bd init)
+.dolt/
+*.db
+.beads-credential-key
+.beads/proxieddb/
+*.gate.lock*
+
+# Environment: .env.schema is committed; values never are.
+.env
+.env.*
+!.env.schema
+
+# Logs and temp
+*.log
+*.pid
+*.tmp
+
+# Native artifacts are distributed separately from the Swift source checkout.
+/RustRuntime/target/
+/Artifacts/
+*.xcframework/
+*.xcframework.zip
