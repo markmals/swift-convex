@@ -1,0 +1,14 @@
+{
+    "contract": "../../Fixtures/LiveBackend/contract.json",
+    "namespace": "LiveAPI",
+    "names": {
+        "functions[actions:echo].arguments[shape].variants[0][type]": "kind",
+        "functions[actions:echo].arguments[shape].variants[1][type]": "kind",
+        "functions[actions:echo].result[shape].variants[0][type]": "kind",
+        "functions[actions:echo].result[shape].variants[1][type]": "kind",
+        "functions[values:echo].arguments[shape].variants[0][type]": "kind",
+        "functions[values:echo].arguments[shape].variants[1][type]": "kind",
+        "functions[values:echo].result[shape].variants[0][type]": "kind",
+        "functions[values:echo].result[shape].variants[1][type]": "kind"
+    }
+}

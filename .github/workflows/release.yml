@@ -1,0 +1,64 @@
+name: Release
+
+on:
+    pull_request:
+        types: [closed]
+        branches: [main]
+
+permissions:
+    contents: read
+
+concurrency:
+    group: release
+    cancel-in-progress: false
+
+jobs:
+    check:
+        name: Check
+        if: >-
+            github.event.pull_request.merged == true
+            && github.head_ref == 'release'
+            && github.event.pull_request.head.repo.full_name == github.repository
+        runs-on: xcode-27
+        steps:
+            - uses: actions/checkout@v7
+              with:
+                  fetch-depth: 0
+            - uses: maxim-lobanov/setup-xcode@v1
+              with:
+                  xcode-version: latest-stable
+            - uses: jdx/mise-action@v5
+              with:
+                  cache: false
+            - run: mise run native:build
+            - name: Authenticate native dependency download
+              env:
+                  GH_TOKEN: ${{ github.token }}
+              run: |
+                  umask 077
+                  printf 'machine api.github.com login x-access-token password %s\n' "$GH_TOKEN" > "$RUNNER_TEMP/convex.netrc"
+                  echo "CONVEX_TEST_NETRC=$RUNNER_TEMP/convex.netrc" >> "$GITHUB_ENV"
+            - run: mise run check
+            - name: Remove artifact credentials
+              if: always()
+              run: rm -f "$RUNNER_TEMP/convex.netrc"
+    release:
+        name: Publish version tag
+        needs: [check]
+        if: >-
+            github.event.pull_request.merged == true
+            && github.head_ref == 'release'
+            && github.event.pull_request.head.repo.full_name == github.repository
+        runs-on: ubuntu-latest
+        permissions:
+            contents: write
+        steps:
+            - uses: actions/checkout@v7
+              with:
+                  fetch-depth: 0
+            - uses: jdx/mise-action@v5
+              with:
+                  cache: false
+            - run: mise run release
+              env:
+                  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

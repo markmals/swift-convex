@@ -1,0 +1,22 @@
+[
+    {
+        "name": "wrong-table-id",
+        "diagnostic": "DocumentID",
+        "source": "import Convex\nfunc invalidRequest() {\n    _ = API.Messages.List(channelID: DocumentID<API.Tables.Messages>(uncheckedRawValue: \"message-id\"))\n}\n"
+    },
+    {
+        "name": "wrong-operation-kind",
+        "diagnostic": "QueryRequest",
+        "source": "import Convex\nfunc invalidRequest(_ client: ConvexClient, channelID: DocumentID<API.Tables.Channels>) async throws {\n    _ = try await client.queryOnce(API.Messages.Send(body: \"hello\", channelID: channelID))\n}\n"
+    },
+    {
+        "name": "missing-required-argument",
+        "diagnostic": "missing argument",
+        "source": "import Convex\nfunc invalidRequest() {\n    _ = API.Messages.List()\n}\n"
+    },
+    {
+        "name": "caller-selected-output",
+        "diagnostic": "cannot convert",
+        "source": "import Convex\nfunc invalidRequest(_ client: ConvexClient, channelID: DocumentID<API.Tables.Channels>) async throws {\n    let _: String = try await client.queryOnce(API.Messages.List(channelID: channelID))\n}\n"
+    }
+]

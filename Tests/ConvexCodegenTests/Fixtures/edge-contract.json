@@ -1,0 +1,435 @@
+{
+    "formatVersion": 1,
+    "provenance": {
+        "exporterVersion": "fixture",
+        "convexVersion": "1.50.0",
+        "typescriptVersion": "5.9.3",
+        "sourceHash": "0f4c2a6b1e9d3c5a7b8e0d2f4a6c8e0b1d3f5a7c9e1b3d5f7a9c1e3b5d7f9a1c"
+    },
+    "functions": [
+        {
+            "path": "users:get",
+            "module": ["users"],
+            "name": "get",
+            "kind": "query",
+            "arguments": {
+                "kind": "object",
+                "fields": [
+                    {
+                        "name": "userId",
+                        "type": { "kind": "id", "table": "users" },
+                        "optional": false
+                    }
+                ]
+            },
+            "result": {
+                "kind": "union",
+                "variants": [
+                    { "kind": "null" },
+                    {
+                        "kind": "object",
+                        "fields": [
+                            {
+                                "name": "_id",
+                                "type": { "kind": "id", "table": "users" },
+                                "optional": false
+                            },
+                            { "name": "name", "type": { "kind": "string" }, "optional": false },
+                            {
+                                "name": "status",
+                                "type": { "kind": "ref", "name": "Status" },
+                                "optional": false
+                            }
+                        ]
+                    }
+                ]
+            },
+            "typeSource": "inferred",
+            "source": { "file": "convex/users.ts", "line": 12 }
+        },
+        {
+            "path": "users:list",
+            "module": ["users"],
+            "name": "list",
+            "kind": "query",
+            "arguments": {
+                "kind": "object",
+                "fields": [
+                    {
+                        "name": "cursor",
+                        "type": {
+                            "kind": "union",
+                            "variants": [{ "kind": "null" }, { "kind": "string" }]
+                        },
+                        "optional": true
+                    },
+                    { "name": "limit", "type": { "kind": "float64" }, "optional": true },
+                    {
+                        "name": "status",
+                        "type": { "kind": "ref", "name": "Status" },
+                        "optional": true
+                    }
+                ]
+            },
+            "result": {
+                "kind": "object",
+                "fields": [
+                    {
+                        "name": "continueCursor",
+                        "type": {
+                            "kind": "union",
+                            "variants": [{ "kind": "null" }, { "kind": "string" }]
+                        },
+                        "optional": false
+                    },
+                    { "name": "isDone", "type": { "kind": "boolean" }, "optional": false },
+                    {
+                        "name": "page",
+                        "type": {
+                            "kind": "array",
+                            "element": {
+                                "kind": "object",
+                                "fields": [
+                                    {
+                                        "name": "id",
+                                        "type": { "kind": "id", "table": "users" },
+                                        "optional": false
+                                    },
+                                    {
+                                        "name": "name",
+                                        "type": { "kind": "string" },
+                                        "optional": false
+                                    }
+                                ]
+                            }
+                        },
+                        "optional": false
+                    }
+                ]
+            },
+            "typeSource": "validator"
+        },
+        {
+            "path": "users:update",
+            "module": ["users"],
+            "name": "update",
+            "kind": "mutation",
+            "arguments": {
+                "kind": "object",
+                "fields": [
+                    {
+                        "name": "patch",
+                        "type": {
+                            "kind": "object",
+                            "fields": [
+                                { "name": "name", "type": { "kind": "string" }, "optional": true },
+                                {
+                                    "name": "priority",
+                                    "type": {
+                                        "kind": "union",
+                                        "variants": [
+                                            { "kind": "null" },
+                                            { "kind": "ref", "name": "Priority" }
+                                        ]
+                                    },
+                                    "optional": true
+                                }
+                            ]
+                        },
+                        "optional": false
+                    },
+                    {
+                        "name": "userId",
+                        "type": { "kind": "id", "table": "users" },
+                        "optional": false
+                    }
+                ]
+            },
+            "result": { "kind": "null" },
+            "typeSource": "inferred"
+        },
+        {
+            "path": "content:post",
+            "module": ["content"],
+            "name": "post",
+            "kind": "mutation",
+            "arguments": {
+                "kind": "object",
+                "fields": [
+                    {
+                        "name": "at",
+                        "type": {
+                            "kind": "tuple",
+                            "elements": [{ "kind": "float64" }, { "kind": "float64" }]
+                        },
+                        "optional": false
+                    },
+                    {
+                        "name": "content",
+                        "type": { "kind": "ref", "name": "Content" },
+                        "optional": false
+                    }
+                ]
+            },
+            "result": { "kind": "int64", "semantic": "commitTimestamp" },
+            "typeSource": "inferred"
+        },
+        {
+            "path": "admin/tools:echo",
+            "module": ["admin", "tools"],
+            "name": "echo",
+            "kind": "action",
+            "arguments": {
+                "kind": "object",
+                "fields": [
+                    { "name": "value", "type": { "kind": "dynamic" }, "optional": false },
+                    {
+                        "name": "values",
+                        "type": {
+                            "kind": "union",
+                            "variants": [{ "kind": "dynamic" }, { "kind": "null" }]
+                        },
+                        "optional": true
+                    }
+                ]
+            },
+            "result": { "kind": "dynamic" },
+            "typeSource": "dynamic"
+        },
+        {
+            "path": "health:check",
+            "module": ["health"],
+            "name": "check",
+            "kind": "query",
+            "arguments": { "kind": "object", "fields": [] },
+            "result": { "kind": "literal", "value": "ok" },
+            "typeSource": "inferred"
+        },
+        {
+            "path": "storage:url",
+            "module": ["storage"],
+            "name": "url",
+            "kind": "query",
+            "arguments": {
+                "kind": "object",
+                "fields": [
+                    {
+                        "name": "storageId",
+                        "type": { "kind": "id", "table": "_storage" },
+                        "optional": false
+                    }
+                ]
+            },
+            "result": { "kind": "union", "variants": [{ "kind": "null" }, { "kind": "string" }] },
+            "typeSource": "inferred"
+        },
+        {
+            "path": "misc:everything",
+            "module": ["misc"],
+            "name": "everything",
+            "kind": "query",
+            "arguments": {
+                "kind": "object",
+                "fields": [
+                    {
+                        "name": "byOwner",
+                        "type": { "kind": "ref", "name": "ByOwner" },
+                        "optional": false
+                    },
+                    {
+                        "name": "count",
+                        "type": { "kind": "literal", "value": { "$integer": "BQAAAAAAAAA=" } },
+                        "optional": false
+                    },
+                    {
+                        "name": "flag",
+                        "type": { "kind": "literal", "value": true },
+                        "optional": false
+                    },
+                    {
+                        "name": "keys",
+                        "type": { "kind": "ref", "name": "Literals" },
+                        "optional": false
+                    },
+                    {
+                        "name": "lookup",
+                        "type": { "kind": "ref", "name": "Lookup" },
+                        "optional": false
+                    },
+                    {
+                        "name": "plain",
+                        "type": { "kind": "ref", "name": "Plain" },
+                        "optional": false
+                    },
+                    {
+                        "name": "point",
+                        "type": { "kind": "ref", "name": "Point" },
+                        "optional": false
+                    },
+                    {
+                        "name": "priority",
+                        "type": { "kind": "ref", "name": "Priority" },
+                        "optional": false
+                    },
+                    {
+                        "name": "scalar",
+                        "type": { "kind": "ref", "name": "Scalar" },
+                        "optional": false
+                    },
+                    {
+                        "name": "setting",
+                        "type": { "kind": "ref", "name": "Setting" },
+                        "optional": false
+                    }
+                ]
+            },
+            "result": {
+                "kind": "tuple",
+                "elements": [
+                    { "kind": "string" },
+                    {
+                        "kind": "union",
+                        "variants": [{ "kind": "null" }, { "kind": "ref", "name": "Content" }]
+                    }
+                ]
+            },
+            "typeSource": "inferred"
+        }
+    ],
+    "tables": [
+        {
+            "name": "users",
+            "document": {
+                "kind": "object",
+                "fields": [
+                    { "name": "_creationTime", "type": { "kind": "float64" }, "optional": false },
+                    {
+                        "name": "_id",
+                        "type": { "kind": "id", "table": "users" },
+                        "optional": false
+                    },
+                    {
+                        "name": "avatar",
+                        "type": { "kind": "id", "table": "_storage" },
+                        "optional": true
+                    },
+                    { "name": "name", "type": { "kind": "string" }, "optional": false },
+                    {
+                        "name": "settings",
+                        "type": {
+                            "kind": "object",
+                            "fields": [
+                                {
+                                    "name": "class",
+                                    "type": { "kind": "boolean" },
+                                    "optional": false
+                                },
+                                {
+                                    "name": "default",
+                                    "type": { "kind": "string" },
+                                    "optional": false
+                                }
+                            ]
+                        },
+                        "optional": false
+                    }
+                ]
+            }
+        }
+    ],
+    "types": {
+        "ByOwner": {
+            "kind": "record",
+            "key": { "kind": "id", "table": "users" },
+            "value": { "kind": "array", "element": { "kind": "string" } }
+        },
+        "Content": {
+            "kind": "union",
+            "variants": [
+                {
+                    "kind": "object",
+                    "fields": [
+                        { "name": "body", "type": { "kind": "string" }, "optional": false },
+                        {
+                            "name": "kind",
+                            "type": { "kind": "literal", "value": "text" },
+                            "optional": false
+                        }
+                    ]
+                },
+                {
+                    "kind": "object",
+                    "fields": [
+                        { "name": "data", "type": { "kind": "bytes" }, "optional": false },
+                        {
+                            "name": "kind",
+                            "type": { "kind": "literal", "value": "image" },
+                            "optional": false
+                        },
+                        { "name": "size", "type": { "kind": "int64" }, "optional": false },
+                        { "name": "url", "type": { "kind": "string" }, "optional": true }
+                    ]
+                }
+            ]
+        },
+        "Literals": {
+            "kind": "record",
+            "key": {
+                "kind": "union",
+                "variants": [
+                    { "kind": "literal", "value": "a" },
+                    { "kind": "literal", "value": "b" }
+                ]
+            },
+            "value": { "kind": "boolean" }
+        },
+        "Lookup": {
+            "kind": "record",
+            "key": { "kind": "ref", "name": "Status" },
+            "value": { "kind": "float64" }
+        },
+        "Plain": { "kind": "record", "key": { "kind": "string" }, "value": { "kind": "dynamic" } },
+        "Point": { "kind": "tuple", "elements": [{ "kind": "float64" }, { "kind": "float64" }] },
+        "Priority": {
+            "kind": "union",
+            "variants": [
+                { "kind": "literal", "value": 1 },
+                { "kind": "literal", "value": 2 },
+                { "kind": "literal", "value": 3 }
+            ]
+        },
+        "Scalar": {
+            "kind": "union",
+            "variants": [
+                { "kind": "array", "element": { "kind": "string" } },
+                { "kind": "boolean" },
+                { "kind": "bytes" },
+                { "kind": "float64" },
+                { "kind": "int64" },
+                {
+                    "kind": "object",
+                    "fields": [
+                        { "name": "label", "type": { "kind": "string" }, "optional": false }
+                    ]
+                },
+                { "kind": "string" }
+            ]
+        },
+        "Setting": {
+            "kind": "union",
+            "variants": [
+                { "kind": "literal", "value": "auto" },
+                { "kind": "literal", "value": false },
+                { "kind": "literal", "value": 0.5 }
+            ]
+        },
+        "Status": {
+            "kind": "union",
+            "variants": [
+                { "kind": "literal", "value": "active" },
+                { "kind": "literal", "value": "archived" },
+                { "kind": "literal", "value": "in_progress" }
+            ]
+        }
+    }
+}

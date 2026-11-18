@@ -2,9 +2,9 @@
 name = "convex-swift-runtime"
 version = "0.1.0"
 edition = "2021"
-rust-version = "1.87"
 license = "Apache-2.0"
 publish = false
+rust-version = "1.87"
 description = """
 UniFFI boundary between swift-convex and the official convex Rust client. Derived from \
 convex-mobile's rust/ bridge at f1a074ac2a4581f6f10f274eb237de05bbc91092.\

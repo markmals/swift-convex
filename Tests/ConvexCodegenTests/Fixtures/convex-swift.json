@@ -1,0 +1,7 @@
+{
+    "contract": "edge-contract.json",
+    "namespace": "Edge",
+    "names": {
+        "functions[misc:everything].arguments[byOwner]": "ownerIndex"
+    }
+}

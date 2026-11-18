@@ -1,0 +1,2154 @@
+{
+  "formatVersion": 1,
+  "functions": [
+    {
+      "arguments": {
+        "fields": [
+          {
+            "name": "channelId",
+            "optional": false,
+            "type": {
+              "kind": "id",
+              "table": "channels"
+            }
+          }
+        ],
+        "kind": "object"
+      },
+      "kind": "action",
+      "module": [
+        "actions"
+      ],
+      "name": "channelSummary",
+      "path": "actions:channelSummary",
+      "result": {
+        "fields": [
+          {
+            "name": "channelId",
+            "optional": false,
+            "type": {
+              "kind": "id",
+              "table": "channels"
+            }
+          },
+          {
+            "name": "messageCount",
+            "optional": false,
+            "type": {
+              "kind": "float64"
+            }
+          }
+        ],
+        "kind": "object"
+      },
+      "source": {
+        "file": "fixtures/backend/convex/actions.ts",
+        "line": 14
+      },
+      "typeSource": "inferred"
+    },
+    {
+      "arguments": {
+        "fields": [
+          {
+            "name": "array",
+            "optional": false,
+            "type": {
+              "element": {
+                "kind": "float64"
+              },
+              "kind": "array"
+            }
+          },
+          {
+            "name": "boolean",
+            "optional": false,
+            "type": {
+              "kind": "boolean"
+            }
+          },
+          {
+            "name": "bytes",
+            "optional": false,
+            "type": {
+              "kind": "bytes"
+            }
+          },
+          {
+            "name": "float",
+            "optional": false,
+            "type": {
+              "kind": "float64"
+            }
+          },
+          {
+            "name": "int",
+            "optional": false,
+            "type": {
+              "kind": "int64"
+            }
+          },
+          {
+            "name": "literal",
+            "optional": false,
+            "type": {
+              "kind": "union",
+              "variants": [
+                {
+                  "kind": "literal",
+                  "value": "alpha"
+                },
+                {
+                  "kind": "literal",
+                  "value": "beta"
+                }
+              ]
+            }
+          },
+          {
+            "name": "nothing",
+            "optional": false,
+            "type": {
+              "kind": "null"
+            }
+          },
+          {
+            "name": "nullable",
+            "optional": false,
+            "type": {
+              "kind": "union",
+              "variants": [
+                {
+                  "kind": "null"
+                },
+                {
+                  "kind": "string"
+                }
+              ]
+            }
+          },
+          {
+            "name": "object",
+            "optional": false,
+            "type": {
+              "fields": [
+                {
+                  "name": "class",
+                  "optional": false,
+                  "type": {
+                    "kind": "string"
+                  }
+                },
+                {
+                  "name": "default",
+                  "optional": false,
+                  "type": {
+                    "kind": "int64"
+                  }
+                },
+                {
+                  "name": "snake_case",
+                  "optional": false,
+                  "type": {
+                    "kind": "boolean"
+                  }
+                }
+              ],
+              "kind": "object"
+            }
+          },
+          {
+            "name": "optional",
+            "optional": true,
+            "type": {
+              "kind": "string"
+            }
+          },
+          {
+            "name": "optionalNullable",
+            "optional": true,
+            "type": {
+              "kind": "union",
+              "variants": [
+                {
+                  "kind": "float64"
+                },
+                {
+                  "kind": "null"
+                }
+              ]
+            }
+          },
+          {
+            "name": "record",
+            "optional": false,
+            "type": {
+              "key": {
+                "kind": "string"
+              },
+              "kind": "record",
+              "value": {
+                "kind": "float64"
+              }
+            }
+          },
+          {
+            "name": "shape",
+            "optional": false,
+            "type": {
+              "kind": "union",
+              "variants": [
+                {
+                  "fields": [
+                    {
+                      "name": "height",
+                      "optional": false,
+                      "type": {
+                        "kind": "float64"
+                      }
+                    },
+                    {
+                      "name": "type",
+                      "optional": false,
+                      "type": {
+                        "kind": "literal",
+                        "value": "rectangle"
+                      }
+                    },
+                    {
+                      "name": "width",
+                      "optional": false,
+                      "type": {
+                        "kind": "float64"
+                      }
+                    }
+                  ],
+                  "kind": "object"
+                },
+                {
+                  "fields": [
+                    {
+                      "name": "radius",
+                      "optional": false,
+                      "type": {
+                        "kind": "float64"
+                      }
+                    },
+                    {
+                      "name": "type",
+                      "optional": false,
+                      "type": {
+                        "kind": "literal",
+                        "value": "circle"
+                      }
+                    }
+                  ],
+                  "kind": "object"
+                }
+              ]
+            }
+          },
+          {
+            "name": "string",
+            "optional": false,
+            "type": {
+              "kind": "string"
+            }
+          },
+          {
+            "name": "union",
+            "optional": false,
+            "type": {
+              "kind": "union",
+              "variants": [
+                {
+                  "kind": "int64"
+                },
+                {
+                  "kind": "string"
+                }
+              ]
+            }
+          }
+        ],
+        "kind": "object"
+      },
+      "kind": "action",
+      "module": [
+        "actions"
+      ],
+      "name": "echo",
+      "path": "actions:echo",
+      "result": {
+        "fields": [
+          {
+            "name": "array",
+            "optional": false,
+            "type": {
+              "element": {
+                "kind": "float64"
+              },
+              "kind": "array"
+            }
+          },
+          {
+            "name": "boolean",
+            "optional": false,
+            "type": {
+              "kind": "boolean"
+            }
+          },
+          {
+            "name": "bytes",
+            "optional": false,
+            "type": {
+              "kind": "bytes"
+            }
+          },
+          {
+            "name": "float",
+            "optional": false,
+            "type": {
+              "kind": "float64"
+            }
+          },
+          {
+            "name": "int",
+            "optional": false,
+            "type": {
+              "kind": "int64"
+            }
+          },
+          {
+            "name": "literal",
+            "optional": false,
+            "type": {
+              "kind": "union",
+              "variants": [
+                {
+                  "kind": "literal",
+                  "value": "alpha"
+                },
+                {
+                  "kind": "literal",
+                  "value": "beta"
+                }
+              ]
+            }
+          },
+          {
+            "name": "nothing",
+            "optional": false,
+            "type": {
+              "kind": "null"
+            }
+          },
+          {
+            "name": "nullable",
+            "optional": false,
+            "type": {
+              "kind": "union",
+              "variants": [
+                {
+                  "kind": "null"
+                },
+                {
+                  "kind": "string"
+                }
+              ]
+            }
+          },
+          {
+            "name": "object",
+            "optional": false,
+            "type": {
+              "fields": [
+                {
+                  "name": "class",
+                  "optional": false,
+                  "type": {
+                    "kind": "string"
+                  }
+                },
+                {
+                  "name": "default",
+                  "optional": false,
+                  "type": {
+                    "kind": "int64"
+                  }
+                },
+                {
+                  "name": "snake_case",
+                  "optional": false,
+                  "type": {
+                    "kind": "boolean"
+                  }
+                }
+              ],
+              "kind": "object"
+            }
+          },
+          {
+            "name": "optional",
+            "optional": true,
+            "type": {
+              "kind": "string"
+            }
+          },
+          {
+            "name": "optionalNullable",
+            "optional": true,
+            "type": {
+              "kind": "union",
+              "variants": [
+                {
+                  "kind": "float64"
+                },
+                {
+                  "kind": "null"
+                }
+              ]
+            }
+          },
+          {
+            "name": "record",
+            "optional": false,
+            "type": {
+              "key": {
+                "kind": "string"
+              },
+              "kind": "record",
+              "value": {
+                "kind": "float64"
+              }
+            }
+          },
+          {
+            "name": "shape",
+            "optional": false,
+            "type": {
+              "kind": "union",
+              "variants": [
+                {
+                  "fields": [
+                    {
+                      "name": "height",
+                      "optional": false,
+                      "type": {
+                        "kind": "float64"
+                      }
+                    },
+                    {
+                      "name": "type",
+                      "optional": false,
+                      "type": {
+                        "kind": "literal",
+                        "value": "rectangle"
+                      }
+                    },
+                    {
+                      "name": "width",
+                      "optional": false,
+                      "type": {
+                        "kind": "float64"
+                      }
+                    }
+                  ],
+                  "kind": "object"
+                },
+                {
+                  "fields": [
+                    {
+                      "name": "radius",
+                      "optional": false,
+                      "type": {
+                        "kind": "float64"
+                      }
+                    },
+                    {
+                      "name": "type",
+                      "optional": false,
+                      "type": {
+                        "kind": "literal",
+                        "value": "circle"
+                      }
+                    }
+                  ],
+                  "kind": "object"
+                }
+              ]
+            }
+          },
+          {
+            "name": "string",
+            "optional": false,
+            "type": {
+              "kind": "string"
+            }
+          },
+          {
+            "name": "union",
+            "optional": false,
+            "type": {
+              "kind": "union",
+              "variants": [
+                {
+                  "kind": "int64"
+                },
+                {
+                  "kind": "string"
+                }
+              ]
+            }
+          }
+        ],
+        "kind": "object"
+      },
+      "source": {
+        "file": "fixtures/backend/convex/actions.ts",
+        "line": 7
+      },
+      "typeSource": "inferred"
+    },
+    {
+      "arguments": {
+        "fields": [],
+        "kind": "object"
+      },
+      "kind": "query",
+      "module": [
+        "admin",
+        "stats"
+      ],
+      "name": "default",
+      "path": "admin/stats",
+      "result": {
+        "fields": [
+          {
+            "name": "channelCount",
+            "optional": false,
+            "type": {
+              "kind": "float64"
+            }
+          },
+          {
+            "name": "messageCount",
+            "optional": false,
+            "type": {
+              "kind": "float64"
+            }
+          }
+        ],
+        "kind": "object"
+      },
+      "source": {
+        "file": "fixtures/backend/convex/admin/stats.ts",
+        "line": 4
+      },
+      "typeSource": "inferred"
+    },
+    {
+      "arguments": {
+        "fields": [],
+        "kind": "object"
+      },
+      "kind": "query",
+      "module": [
+        "admin",
+        "stats"
+      ],
+      "name": "messageCounts",
+      "path": "admin/stats:messageCounts",
+      "result": {
+        "key": {
+          "kind": "id",
+          "table": "channels"
+        },
+        "kind": "record",
+        "value": {
+          "kind": "int64"
+        }
+      },
+      "source": {
+        "file": "fixtures/backend/convex/admin/stats.ts",
+        "line": 12
+      },
+      "typeSource": "inferred"
+    },
+    {
+      "arguments": {
+        "fields": [],
+        "kind": "object"
+      },
+      "kind": "query",
+      "module": [
+        "auth"
+      ],
+      "name": "whoami",
+      "path": "auth:whoami",
+      "result": {
+        "kind": "union",
+        "variants": [
+          {
+            "fields": [
+              {
+                "name": "email",
+                "optional": false,
+                "type": {
+                  "kind": "union",
+                  "variants": [
+                    {
+                      "kind": "null"
+                    },
+                    {
+                      "kind": "string"
+                    }
+                  ]
+                }
+              },
+              {
+                "name": "issuer",
+                "optional": false,
+                "type": {
+                  "kind": "string"
+                }
+              },
+              {
+                "name": "name",
+                "optional": false,
+                "type": {
+                  "kind": "union",
+                  "variants": [
+                    {
+                      "kind": "null"
+                    },
+                    {
+                      "kind": "string"
+                    }
+                  ]
+                }
+              },
+              {
+                "name": "subject",
+                "optional": false,
+                "type": {
+                  "kind": "string"
+                }
+              },
+              {
+                "name": "tokenIdentifier",
+                "optional": false,
+                "type": {
+                  "kind": "string"
+                }
+              }
+            ],
+            "kind": "object"
+          },
+          {
+            "kind": "null"
+          }
+        ]
+      },
+      "source": {
+        "file": "fixtures/backend/convex/auth.ts",
+        "line": 5
+      },
+      "typeSource": "inferred"
+    },
+    {
+      "arguments": {
+        "fields": [
+          {
+            "name": "name",
+            "optional": false,
+            "type": {
+              "kind": "string"
+            }
+          }
+        ],
+        "kind": "object"
+      },
+      "kind": "mutation",
+      "module": [
+        "channels"
+      ],
+      "name": "create",
+      "path": "channels:create",
+      "result": {
+        "kind": "id",
+        "table": "channels"
+      },
+      "source": {
+        "file": "fixtures/backend/convex/channels.ts",
+        "line": 4
+      },
+      "typeSource": "inferred"
+    },
+    {
+      "arguments": {
+        "fields": [
+          {
+            "name": "channelId",
+            "optional": false,
+            "type": {
+              "kind": "id",
+              "table": "channels"
+            }
+          }
+        ],
+        "kind": "object"
+      },
+      "kind": "query",
+      "module": [
+        "channels"
+      ],
+      "name": "get",
+      "path": "channels:get",
+      "result": {
+        "kind": "union",
+        "variants": [
+          {
+            "kind": "null"
+          },
+          {
+            "kind": "ref",
+            "name": "tables/channels"
+          }
+        ]
+      },
+      "source": {
+        "file": "fixtures/backend/convex/channels.ts",
+        "line": 33
+      },
+      "typeSource": "inferred"
+    },
+    {
+      "arguments": {
+        "fields": [],
+        "kind": "object"
+      },
+      "kind": "query",
+      "module": [
+        "channels"
+      ],
+      "name": "list",
+      "path": "channels:list",
+      "result": {
+        "element": {
+          "kind": "ref",
+          "name": "tables/channels"
+        },
+        "kind": "array"
+      },
+      "source": {
+        "file": "fixtures/backend/convex/channels.ts",
+        "line": 38
+      },
+      "typeSource": "inferred"
+    },
+    {
+      "arguments": {
+        "fields": [
+          {
+            "name": "channelId",
+            "optional": false,
+            "type": {
+              "kind": "id",
+              "table": "channels"
+            }
+          },
+          {
+            "name": "topic",
+            "optional": false,
+            "type": {
+              "kind": "union",
+              "variants": [
+                {
+                  "kind": "null"
+                },
+                {
+                  "kind": "string"
+                }
+              ]
+            }
+          }
+        ],
+        "kind": "object"
+      },
+      "kind": "mutation",
+      "module": [
+        "channels"
+      ],
+      "name": "setTopic",
+      "path": "channels:setTopic",
+      "result": {
+        "kind": "null"
+      },
+      "source": {
+        "file": "fixtures/backend/convex/channels.ts",
+        "line": 43
+      },
+      "typeSource": "inferred"
+    },
+    {
+      "arguments": {
+        "fields": [
+          {
+            "name": "outcome",
+            "optional": false,
+            "type": {
+              "kind": "union",
+              "variants": [
+                {
+                  "kind": "literal",
+                  "value": "applicationError"
+                },
+                {
+                  "kind": "literal",
+                  "value": "serverError"
+                },
+                {
+                  "kind": "literal",
+                  "value": "success"
+                }
+              ]
+            }
+          }
+        ],
+        "kind": "object"
+      },
+      "kind": "query",
+      "module": [
+        "errors"
+      ],
+      "name": "check",
+      "path": "errors:check",
+      "result": {
+        "fields": [
+          {
+            "name": "outcome",
+            "optional": false,
+            "type": {
+              "kind": "literal",
+              "value": "success"
+            }
+          }
+        ],
+        "kind": "object"
+      },
+      "source": {
+        "file": "fixtures/backend/convex/errors.ts",
+        "line": 4
+      },
+      "typeSource": "inferred"
+    },
+    {
+      "arguments": {
+        "fields": [],
+        "kind": "object"
+      },
+      "kind": "mutation",
+      "module": [
+        "files"
+      ],
+      "name": "generateUploadUrl",
+      "path": "files:generateUploadUrl",
+      "result": {
+        "kind": "string"
+      },
+      "source": {
+        "file": "fixtures/backend/convex/files.ts",
+        "line": 4
+      },
+      "typeSource": "inferred"
+    },
+    {
+      "arguments": {
+        "fields": [
+          {
+            "name": "storageId",
+            "optional": false,
+            "type": {
+              "kind": "id",
+              "table": "_storage"
+            }
+          }
+        ],
+        "kind": "object"
+      },
+      "kind": "query",
+      "module": [
+        "files"
+      ],
+      "name": "getUrl",
+      "path": "files:getUrl",
+      "result": {
+        "kind": "union",
+        "variants": [
+          {
+            "kind": "null"
+          },
+          {
+            "kind": "string"
+          }
+        ]
+      },
+      "source": {
+        "file": "fixtures/backend/convex/files.ts",
+        "line": 8
+      },
+      "typeSource": "inferred"
+    },
+    {
+      "arguments": {
+        "fields": [],
+        "kind": "object"
+      },
+      "kind": "query",
+      "module": [
+        "health"
+      ],
+      "name": "check",
+      "path": "health:check",
+      "result": {
+        "fields": [
+          {
+            "name": "status",
+            "optional": false,
+            "type": {
+              "kind": "literal",
+              "value": "ok"
+            }
+          }
+        ],
+        "kind": "object"
+      },
+      "source": {
+        "file": "fixtures/backend/convex/health.ts",
+        "line": 4
+      },
+      "typeSource": "inferred"
+    },
+    {
+      "arguments": {
+        "fields": [
+          {
+            "name": "messageId",
+            "optional": false,
+            "type": {
+              "kind": "id",
+              "table": "messages"
+            }
+          },
+          {
+            "name": "storageId",
+            "optional": false,
+            "type": {
+              "kind": "id",
+              "table": "_storage"
+            }
+          }
+        ],
+        "kind": "object"
+      },
+      "kind": "mutation",
+      "module": [
+        "messages"
+      ],
+      "name": "attach",
+      "path": "messages:attach",
+      "result": {
+        "kind": "null"
+      },
+      "source": {
+        "file": "fixtures/backend/convex/messages.ts",
+        "line": 95
+      },
+      "typeSource": "inferred"
+    },
+    {
+      "arguments": {
+        "fields": [
+          {
+            "name": "body",
+            "optional": false,
+            "type": {
+              "kind": "string"
+            }
+          },
+          {
+            "name": "messageId",
+            "optional": false,
+            "type": {
+              "kind": "id",
+              "table": "messages"
+            }
+          }
+        ],
+        "kind": "object"
+      },
+      "kind": "mutation",
+      "module": [
+        "messages"
+      ],
+      "name": "edit",
+      "path": "messages:edit",
+      "result": {
+        "kind": "null"
+      },
+      "source": {
+        "file": "fixtures/backend/convex/messages.ts",
+        "line": 88
+      },
+      "typeSource": "inferred"
+    },
+    {
+      "arguments": {
+        "fields": [
+          {
+            "name": "messageId",
+            "optional": false,
+            "type": {
+              "kind": "id",
+              "table": "messages"
+            }
+          }
+        ],
+        "kind": "object"
+      },
+      "kind": "query",
+      "module": [
+        "messages"
+      ],
+      "name": "get",
+      "path": "messages:get",
+      "result": {
+        "kind": "union",
+        "variants": [
+          {
+            "kind": "null"
+          },
+          {
+            "kind": "ref",
+            "name": "tables/messages"
+          }
+        ]
+      },
+      "source": {
+        "file": "fixtures/backend/convex/messages.ts",
+        "line": 47
+      },
+      "typeSource": "inferred"
+    },
+    {
+      "arguments": {
+        "fields": [
+          {
+            "name": "channelId",
+            "optional": false,
+            "type": {
+              "kind": "id",
+              "table": "channels"
+            }
+          }
+        ],
+        "kind": "object"
+      },
+      "kind": "query",
+      "module": [
+        "messages"
+      ],
+      "name": "list",
+      "path": "messages:list",
+      "result": {
+        "element": {
+          "kind": "ref",
+          "name": "tables/messages"
+        },
+        "kind": "array"
+      },
+      "source": {
+        "file": "fixtures/backend/convex/messages.ts",
+        "line": 25
+      },
+      "typeSource": "inferred"
+    },
+    {
+      "arguments": {
+        "fields": [
+          {
+            "name": "channelId",
+            "optional": false,
+            "type": {
+              "kind": "id",
+              "table": "channels"
+            }
+          },
+          {
+            "name": "paginationOpts",
+            "optional": false,
+            "type": {
+              "fields": [
+                {
+                  "name": "cursor",
+                  "optional": false,
+                  "type": {
+                    "kind": "union",
+                    "variants": [
+                      {
+                        "kind": "null"
+                      },
+                      {
+                        "kind": "string"
+                      }
+                    ]
+                  }
+                },
+                {
+                  "name": "endCursor",
+                  "optional": true,
+                  "type": {
+                    "kind": "union",
+                    "variants": [
+                      {
+                        "kind": "null"
+                      },
+                      {
+                        "kind": "string"
+                      }
+                    ]
+                  }
+                },
+                {
+                  "name": "id",
+                  "optional": true,
+                  "type": {
+                    "kind": "float64"
+                  }
+                },
+                {
+                  "name": "maximumBytesRead",
+                  "optional": true,
+                  "type": {
+                    "kind": "float64"
+                  }
+                },
+                {
+                  "name": "maximumRowsRead",
+                  "optional": true,
+                  "type": {
+                    "kind": "float64"
+                  }
+                },
+                {
+                  "name": "numItems",
+                  "optional": false,
+                  "type": {
+                    "kind": "float64"
+                  }
+                }
+              ],
+              "kind": "object"
+            }
+          }
+        ],
+        "kind": "object"
+      },
+      "kind": "query",
+      "module": [
+        "messages"
+      ],
+      "name": "paginate",
+      "path": "messages:paginate",
+      "result": {
+        "fields": [
+          {
+            "name": "continueCursor",
+            "optional": false,
+            "type": {
+              "kind": "string"
+            }
+          },
+          {
+            "name": "isDone",
+            "optional": false,
+            "type": {
+              "kind": "boolean"
+            }
+          },
+          {
+            "name": "page",
+            "optional": false,
+            "type": {
+              "element": {
+                "kind": "ref",
+                "name": "tables/messages"
+              },
+              "kind": "array"
+            }
+          },
+          {
+            "name": "pageStatus",
+            "optional": true,
+            "type": {
+              "kind": "union",
+              "variants": [
+                {
+                  "kind": "literal",
+                  "value": "SplitRecommended"
+                },
+                {
+                  "kind": "literal",
+                  "value": "SplitRequired"
+                },
+                {
+                  "kind": "null"
+                }
+              ]
+            }
+          },
+          {
+            "name": "splitCursor",
+            "optional": true,
+            "type": {
+              "kind": "union",
+              "variants": [
+                {
+                  "kind": "null"
+                },
+                {
+                  "kind": "string"
+                }
+              ]
+            }
+          }
+        ],
+        "kind": "object"
+      },
+      "source": {
+        "file": "fixtures/backend/convex/messages.ts",
+        "line": 34
+      },
+      "typeSource": "inferred"
+    },
+    {
+      "arguments": {
+        "fields": [
+          {
+            "name": "messageId",
+            "optional": false,
+            "type": {
+              "kind": "id",
+              "table": "messages"
+            }
+          }
+        ],
+        "kind": "object"
+      },
+      "kind": "mutation",
+      "module": [
+        "messages"
+      ],
+      "name": "remove",
+      "path": "messages:remove",
+      "result": {
+        "kind": "null"
+      },
+      "source": {
+        "file": "fixtures/backend/convex/messages.ts",
+        "line": 102
+      },
+      "typeSource": "inferred"
+    },
+    {
+      "arguments": {
+        "fields": [
+          {
+            "name": "body",
+            "optional": false,
+            "type": {
+              "kind": "string"
+            }
+          },
+          {
+            "name": "channelId",
+            "optional": false,
+            "type": {
+              "kind": "id",
+              "table": "channels"
+            }
+          }
+        ],
+        "kind": "object"
+      },
+      "kind": "mutation",
+      "module": [
+        "messages"
+      ],
+      "name": "send",
+      "path": "messages:send",
+      "result": {
+        "kind": "id",
+        "table": "messages"
+      },
+      "source": {
+        "file": "fixtures/backend/convex/messages.ts",
+        "line": 52
+      },
+      "typeSource": "inferred"
+    },
+    {
+      "arguments": {
+        "fields": [
+          {
+            "name": "array",
+            "optional": false,
+            "type": {
+              "element": {
+                "kind": "float64"
+              },
+              "kind": "array"
+            }
+          },
+          {
+            "name": "boolean",
+            "optional": false,
+            "type": {
+              "kind": "boolean"
+            }
+          },
+          {
+            "name": "bytes",
+            "optional": false,
+            "type": {
+              "kind": "bytes"
+            }
+          },
+          {
+            "name": "float",
+            "optional": false,
+            "type": {
+              "kind": "float64"
+            }
+          },
+          {
+            "name": "int",
+            "optional": false,
+            "type": {
+              "kind": "int64"
+            }
+          },
+          {
+            "name": "literal",
+            "optional": false,
+            "type": {
+              "kind": "union",
+              "variants": [
+                {
+                  "kind": "literal",
+                  "value": "alpha"
+                },
+                {
+                  "kind": "literal",
+                  "value": "beta"
+                }
+              ]
+            }
+          },
+          {
+            "name": "nothing",
+            "optional": false,
+            "type": {
+              "kind": "null"
+            }
+          },
+          {
+            "name": "nullable",
+            "optional": false,
+            "type": {
+              "kind": "union",
+              "variants": [
+                {
+                  "kind": "null"
+                },
+                {
+                  "kind": "string"
+                }
+              ]
+            }
+          },
+          {
+            "name": "object",
+            "optional": false,
+            "type": {
+              "fields": [
+                {
+                  "name": "class",
+                  "optional": false,
+                  "type": {
+                    "kind": "string"
+                  }
+                },
+                {
+                  "name": "default",
+                  "optional": false,
+                  "type": {
+                    "kind": "int64"
+                  }
+                },
+                {
+                  "name": "snake_case",
+                  "optional": false,
+                  "type": {
+                    "kind": "boolean"
+                  }
+                }
+              ],
+              "kind": "object"
+            }
+          },
+          {
+            "name": "optional",
+            "optional": true,
+            "type": {
+              "kind": "string"
+            }
+          },
+          {
+            "name": "optionalNullable",
+            "optional": true,
+            "type": {
+              "kind": "union",
+              "variants": [
+                {
+                  "kind": "float64"
+                },
+                {
+                  "kind": "null"
+                }
+              ]
+            }
+          },
+          {
+            "name": "record",
+            "optional": false,
+            "type": {
+              "key": {
+                "kind": "string"
+              },
+              "kind": "record",
+              "value": {
+                "kind": "float64"
+              }
+            }
+          },
+          {
+            "name": "shape",
+            "optional": false,
+            "type": {
+              "kind": "union",
+              "variants": [
+                {
+                  "fields": [
+                    {
+                      "name": "height",
+                      "optional": false,
+                      "type": {
+                        "kind": "float64"
+                      }
+                    },
+                    {
+                      "name": "type",
+                      "optional": false,
+                      "type": {
+                        "kind": "literal",
+                        "value": "rectangle"
+                      }
+                    },
+                    {
+                      "name": "width",
+                      "optional": false,
+                      "type": {
+                        "kind": "float64"
+                      }
+                    }
+                  ],
+                  "kind": "object"
+                },
+                {
+                  "fields": [
+                    {
+                      "name": "radius",
+                      "optional": false,
+                      "type": {
+                        "kind": "float64"
+                      }
+                    },
+                    {
+                      "name": "type",
+                      "optional": false,
+                      "type": {
+                        "kind": "literal",
+                        "value": "circle"
+                      }
+                    }
+                  ],
+                  "kind": "object"
+                }
+              ]
+            }
+          },
+          {
+            "name": "string",
+            "optional": false,
+            "type": {
+              "kind": "string"
+            }
+          },
+          {
+            "name": "union",
+            "optional": false,
+            "type": {
+              "kind": "union",
+              "variants": [
+                {
+                  "kind": "int64"
+                },
+                {
+                  "kind": "string"
+                }
+              ]
+            }
+          }
+        ],
+        "kind": "object"
+      },
+      "kind": "query",
+      "module": [
+        "values"
+      ],
+      "name": "echo",
+      "path": "values:echo",
+      "result": {
+        "fields": [
+          {
+            "name": "array",
+            "optional": false,
+            "type": {
+              "element": {
+                "kind": "float64"
+              },
+              "kind": "array"
+            }
+          },
+          {
+            "name": "boolean",
+            "optional": false,
+            "type": {
+              "kind": "boolean"
+            }
+          },
+          {
+            "name": "bytes",
+            "optional": false,
+            "type": {
+              "kind": "bytes"
+            }
+          },
+          {
+            "name": "float",
+            "optional": false,
+            "type": {
+              "kind": "float64"
+            }
+          },
+          {
+            "name": "int",
+            "optional": false,
+            "type": {
+              "kind": "int64"
+            }
+          },
+          {
+            "name": "literal",
+            "optional": false,
+            "type": {
+              "kind": "union",
+              "variants": [
+                {
+                  "kind": "literal",
+                  "value": "alpha"
+                },
+                {
+                  "kind": "literal",
+                  "value": "beta"
+                }
+              ]
+            }
+          },
+          {
+            "name": "nothing",
+            "optional": false,
+            "type": {
+              "kind": "null"
+            }
+          },
+          {
+            "name": "nullable",
+            "optional": false,
+            "type": {
+              "kind": "union",
+              "variants": [
+                {
+                  "kind": "null"
+                },
+                {
+                  "kind": "string"
+                }
+              ]
+            }
+          },
+          {
+            "name": "object",
+            "optional": false,
+            "type": {
+              "fields": [
+                {
+                  "name": "class",
+                  "optional": false,
+                  "type": {
+                    "kind": "string"
+                  }
+                },
+                {
+                  "name": "default",
+                  "optional": false,
+                  "type": {
+                    "kind": "int64"
+                  }
+                },
+                {
+                  "name": "snake_case",
+                  "optional": false,
+                  "type": {
+                    "kind": "boolean"
+                  }
+                }
+              ],
+              "kind": "object"
+            }
+          },
+          {
+            "name": "optional",
+            "optional": true,
+            "type": {
+              "kind": "string"
+            }
+          },
+          {
+            "name": "optionalNullable",
+            "optional": true,
+            "type": {
+              "kind": "union",
+              "variants": [
+                {
+                  "kind": "float64"
+                },
+                {
+                  "kind": "null"
+                }
+              ]
+            }
+          },
+          {
+            "name": "record",
+            "optional": false,
+            "type": {
+              "key": {
+                "kind": "string"
+              },
+              "kind": "record",
+              "value": {
+                "kind": "float64"
+              }
+            }
+          },
+          {
+            "name": "shape",
+            "optional": false,
+            "type": {
+              "kind": "union",
+              "variants": [
+                {
+                  "fields": [
+                    {
+                      "name": "height",
+                      "optional": false,
+                      "type": {
+                        "kind": "float64"
+                      }
+                    },
+                    {
+                      "name": "type",
+                      "optional": false,
+                      "type": {
+                        "kind": "literal",
+                        "value": "rectangle"
+                      }
+                    },
+                    {
+                      "name": "width",
+                      "optional": false,
+                      "type": {
+                        "kind": "float64"
+                      }
+                    }
+                  ],
+                  "kind": "object"
+                },
+                {
+                  "fields": [
+                    {
+                      "name": "radius",
+                      "optional": false,
+                      "type": {
+                        "kind": "float64"
+                      }
+                    },
+                    {
+                      "name": "type",
+                      "optional": false,
+                      "type": {
+                        "kind": "literal",
+                        "value": "circle"
+                      }
+                    }
+                  ],
+                  "kind": "object"
+                }
+              ]
+            }
+          },
+          {
+            "name": "string",
+            "optional": false,
+            "type": {
+              "kind": "string"
+            }
+          },
+          {
+            "name": "union",
+            "optional": false,
+            "type": {
+              "kind": "union",
+              "variants": [
+                {
+                  "kind": "int64"
+                },
+                {
+                  "kind": "string"
+                }
+              ]
+            }
+          }
+        ],
+        "kind": "object"
+      },
+      "source": {
+        "file": "fixtures/backend/convex/values.ts",
+        "line": 36
+      },
+      "typeSource": "inferred"
+    },
+    {
+      "arguments": {
+        "fields": [],
+        "kind": "object"
+      },
+      "kind": "query",
+      "module": [
+        "values"
+      ],
+      "name": "special",
+      "path": "values:special",
+      "result": {
+        "fields": [
+          {
+            "name": "bytes",
+            "optional": false,
+            "type": {
+              "kind": "bytes"
+            }
+          },
+          {
+            "name": "int64Max",
+            "optional": false,
+            "type": {
+              "kind": "int64"
+            }
+          },
+          {
+            "name": "int64Min",
+            "optional": false,
+            "type": {
+              "kind": "int64"
+            }
+          },
+          {
+            "name": "keys",
+            "optional": false,
+            "type": {
+              "fields": [
+                {
+                  "name": "dot.ted",
+                  "optional": false,
+                  "type": {
+                    "kind": "string"
+                  }
+                },
+                {
+                  "name": "kebab-case",
+                  "optional": false,
+                  "type": {
+                    "kind": "string"
+                  }
+                },
+                {
+                  "name": "with space",
+                  "optional": false,
+                  "type": {
+                    "kind": "string"
+                  }
+                }
+              ],
+              "kind": "object"
+            }
+          },
+          {
+            "name": "nan",
+            "optional": false,
+            "type": {
+              "kind": "float64"
+            }
+          },
+          {
+            "name": "negativeInfinity",
+            "optional": false,
+            "type": {
+              "kind": "float64"
+            }
+          },
+          {
+            "name": "negativeZero",
+            "optional": false,
+            "type": {
+              "kind": "float64"
+            }
+          },
+          {
+            "name": "pair",
+            "optional": false,
+            "type": {
+              "elements": [
+                {
+                  "kind": "string"
+                },
+                {
+                  "kind": "float64"
+                }
+              ],
+              "kind": "tuple"
+            }
+          },
+          {
+            "name": "positiveInfinity",
+            "optional": false,
+            "type": {
+              "kind": "float64"
+            }
+          },
+          {
+            "name": "tag",
+            "optional": false,
+            "type": {
+              "kind": "literal",
+              "value": "special"
+            }
+          },
+          {
+            "name": "version",
+            "optional": false,
+            "type": {
+              "kind": "literal",
+              "value": {
+                "$integer": "AQAAAAAAAAA="
+              }
+            }
+          }
+        ],
+        "kind": "object"
+      },
+      "source": {
+        "file": "fixtures/backend/convex/values.ts",
+        "line": 42
+      },
+      "typeSource": "inferred"
+    }
+  ],
+  "provenance": {
+    "convexVersion": "1.50.0",
+    "exporterVersion": "0.1.0",
+    "sourceHash": "fc8f902be84dc27e0b94a4a3dfd3500f433a4c2928b4f78d74f68dad8d42f54c",
+    "typescriptVersion": "5.9.3"
+  },
+  "tables": [
+    {
+      "document": {
+        "kind": "ref",
+        "name": "tables/channels"
+      },
+      "name": "channels"
+    },
+    {
+      "document": {
+        "kind": "ref",
+        "name": "tables/messages"
+      },
+      "name": "messages"
+    }
+  ],
+  "types": {
+    "tables/channels": {
+      "fields": [
+        {
+          "name": "_creationTime",
+          "optional": false,
+          "type": {
+            "kind": "float64"
+          }
+        },
+        {
+          "name": "_id",
+          "optional": false,
+          "type": {
+            "kind": "id",
+            "table": "channels"
+          }
+        },
+        {
+          "name": "archivedAt",
+          "optional": true,
+          "type": {
+            "kind": "union",
+            "variants": [
+              {
+                "kind": "float64"
+              },
+              {
+                "kind": "null"
+              }
+            ]
+          }
+        },
+        {
+          "name": "description",
+          "optional": true,
+          "type": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "messageCount",
+          "optional": false,
+          "type": {
+            "kind": "int64"
+          }
+        },
+        {
+          "name": "name",
+          "optional": false,
+          "type": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "topic",
+          "optional": false,
+          "type": {
+            "kind": "union",
+            "variants": [
+              {
+                "kind": "null"
+              },
+              {
+                "kind": "string"
+              }
+            ]
+          }
+        },
+        {
+          "name": "visibility",
+          "optional": false,
+          "type": {
+            "kind": "union",
+            "variants": [
+              {
+                "kind": "literal",
+                "value": "private"
+              },
+              {
+                "kind": "literal",
+                "value": "public"
+              }
+            ]
+          }
+        }
+      ],
+      "kind": "object"
+    },
+    "tables/messages": {
+      "fields": [
+        {
+          "name": "_creationTime",
+          "optional": false,
+          "type": {
+            "kind": "float64"
+          }
+        },
+        {
+          "name": "_id",
+          "optional": false,
+          "type": {
+            "kind": "id",
+            "table": "messages"
+          }
+        },
+        {
+          "name": "attachment",
+          "optional": true,
+          "type": {
+            "kind": "id",
+            "table": "_storage"
+          }
+        },
+        {
+          "name": "author",
+          "optional": false,
+          "type": {
+            "kind": "union",
+            "variants": [
+              {
+                "fields": [
+                  {
+                    "name": "kind",
+                    "optional": false,
+                    "type": {
+                      "kind": "literal",
+                      "value": "anonymous"
+                    }
+                  }
+                ],
+                "kind": "object"
+              },
+              {
+                "fields": [
+                  {
+                    "name": "kind",
+                    "optional": false,
+                    "type": {
+                      "kind": "literal",
+                      "value": "system"
+                    }
+                  },
+                  {
+                    "name": "reason",
+                    "optional": false,
+                    "type": {
+                      "kind": "string"
+                    }
+                  }
+                ],
+                "kind": "object"
+              },
+              {
+                "fields": [
+                  {
+                    "name": "kind",
+                    "optional": false,
+                    "type": {
+                      "kind": "literal",
+                      "value": "user"
+                    }
+                  },
+                  {
+                    "name": "name",
+                    "optional": false,
+                    "type": {
+                      "kind": "union",
+                      "variants": [
+                        {
+                          "kind": "null"
+                        },
+                        {
+                          "kind": "string"
+                        }
+                      ]
+                    }
+                  },
+                  {
+                    "name": "tokenIdentifier",
+                    "optional": false,
+                    "type": {
+                      "kind": "string"
+                    }
+                  }
+                ],
+                "kind": "object"
+              }
+            ]
+          }
+        },
+        {
+          "name": "body",
+          "optional": false,
+          "type": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "channelId",
+          "optional": false,
+          "type": {
+            "kind": "id",
+            "table": "channels"
+          }
+        },
+        {
+          "name": "committedAt",
+          "optional": false,
+          "type": {
+            "kind": "int64",
+            "semantic": "commitTimestamp"
+          }
+        },
+        {
+          "name": "editedAt",
+          "optional": false,
+          "type": {
+            "kind": "union",
+            "variants": [
+              {
+                "kind": "float64"
+              },
+              {
+                "kind": "null"
+              }
+            ]
+          }
+        }
+      ],
+      "kind": "object"
+    }
+  }
+}

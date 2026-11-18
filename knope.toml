@@ -1,0 +1,66 @@
+# Knope owns this library's version, changelog, and releases. Change files in `.changeset/` are the
+# only source of version bumps: Scoped Commits subjects are not Conventional Commits.
+#
+# SwiftPM resolves versions from Git tags alone, and only from tags that are a semantic version
+# with an optional `v`. The single `[package]` form below tags `v<version>`, which SwiftPM
+# resolves; `[packages.<name>]` would tag `<name>/v<version>`, which SwiftPM ignores.
+#
+# Consumer/Package.swift carries the release version until a first stable release exists.
+# Reading only Git tags would leave a separate prepare/release workflow at the previous version.
+
+[package]
+versioned_files = [
+    { path = "Consumer/Package.swift", regex = 'from: "(?<version>[^"]+)"' },
+]
+changelog = "CHANGELOG.md"
+
+[changes]
+ignore_conventional_commits = true
+
+[release_notes]
+change_templates = [
+    "### $summary\n\n$details",
+    "* $summary by @$pr_author_login in #$pr_number",
+    "* $summary",
+]
+
+[github]
+owner = "markmals"
+repo = "swift-convex"
+
+# `.github/workflows/prepare-release.yml` runs this on every push to `main`: it keeps one release
+# pull request open from the `release` branch, showing the next version and its changelog entry.
+[[workflows]]
+name = "prepare-release"
+
+[[workflows.steps]]
+type = "Command"
+command = "git switch -c release"
+
+[[workflows.steps]]
+type = "PrepareRelease"
+
+[[workflows.steps]]
+type = "Command"
+command = "git commit -m \"release: prepare $version\""
+
+[[workflows.steps]]
+type = "Command"
+command = "git push --force-with-lease --set-upstream origin release"
+
+[[workflows.steps]]
+type = "CreatePullRequest"
+base = "main"
+
+[workflows.steps.title]
+template = "release: prepare $version"
+
+[workflows.steps.body]
+template = "Merging this pull request releases Convex $version: `knope release` tags `v$version`, which SwiftPM resolves, and publishes the GitHub release with these notes.\n\n$changelog"
+
+# `.github/workflows/release.yml` runs this when the release pull request merges.
+[[workflows]]
+name = "release"
+
+[[workflows.steps]]
+type = "Release"

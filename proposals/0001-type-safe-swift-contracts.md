@@ -234,10 +234,12 @@ convex-contract-export --project convex/tsconfig.json --output contracts/convex-
 
 # Swift consumer choosing checked-in generation instead of the build plugin.
 swift package --allow-writing-to-package-directory generate-convex
-swift package generate-convex --check
+swift package --allow-writing-to-package-directory generate-convex --check
 ```
 
 These command names are proposed. The exporter is a separately distributed backend development dependency with its own source, compiler dependencies, and tests. Swift tooling includes none of that TypeScript implementation. Neither Swift plugin installs or invokes Node, accesses a deployment, or needs a deploy key. Backend automation may explicitly run export before a Swift build, but ordinary Swift generation reads only the local contract snapshot.
+
+SwiftPM grants command-plugin permissions before inspecting arguments, so even the non-writing `--check` invocation requires the plugin's declared write permission. The generator executable's direct `--check` mode needs no plugin permission and does not modify files.
 
 Provide SwiftPM package-target integration and Xcode build-tool integration through the appropriate plugin host APIs. Also support generating a standalone Swift contract package consumed by an Xcode application; this avoids requiring every application target to host a generator. Test both hosts, including a clean build, incremental regeneration, and file removal.
 

@@ -9,7 +9,7 @@ updated: 2026-11-17
 
 Swift Convex gives Swift applications a compiler-checked contract with their Convex backend. Developers should discover functions, supply arguments, and consume results through Swift declarations derived from the backend, without maintaining a parallel set of string paths and handwritten response types.
 
-This vision records the initial intent. [Proposal 0001](proposals/0001-type-safe-swift-contracts.md) remains open for review; its architecture is not approved or implemented.
+This vision records the project intent. [Proposal 0001](proposals/0001-type-safe-swift-contracts.md) is approved for implementation, including live Observation-backed query models. Implementation and release verification are underway.
 
 ## Goals
 
@@ -32,7 +32,7 @@ A developer can derive Swift contracts from a real Convex backend, use them for 
 
 ## Beyond the minimum
 
-- SwiftUI-specific observation and pagination conveniences may improve application ergonomics once the underlying typed contract is established.
+- Additional SwiftUI conveniences and pagination controllers may improve application ergonomics beyond the initial live Observable query model.
 - Additional transports may extend platform coverage if their authentication, consistency, and subscription behavior can be verified.
 
 ## Non-goals
