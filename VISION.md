@@ -1,6 +1,6 @@
 ---
 title: A Vision for Swift Convex
-updated: 2026-11-17
+updated: 2026-11-18
 ---
 
 # A Vision for Swift Convex
@@ -9,7 +9,7 @@ updated: 2026-11-17
 
 Swift Convex gives Swift applications a compiler-checked contract with their Convex backend. Developers should discover functions, supply arguments, and consume results through Swift declarations derived from the backend, without maintaining a parallel set of string paths and handwritten response types.
 
-This vision records the project intent. [Proposal 0001](proposals/0001-type-safe-swift-contracts.md) is approved for implementation, including live Observation-backed query models. Implementation and release verification are underway.
+[Proposal 0001](proposals/0001-type-safe-swift-contracts.md) implements the initial contract, generator, and Rust-backed client, including live Observation-backed queries. The implementation is accepted for merge. A versioned Swift library release requires separate authorization.
 
 ## Goals
 
@@ -46,3 +46,4 @@ A developer can derive Swift contracts from a real Convex backend, use them for 
 | Date       | Change                                                             | Related proposal                                             |
 | ---------- | ------------------------------------------------------------------ | ------------------------------------------------------------ |
 | 2026-11-17 | Recorded the initial project intent; architecture remains a draft. | [proposal.0001](proposals/0001-type-safe-swift-contracts.md) |
+| 2026-11-18 | Accepted the generated contracts, typed client, and live Observable query implementation. | [proposal.0001](proposals/0001-type-safe-swift-contracts.md) |

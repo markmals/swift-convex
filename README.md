@@ -2,16 +2,16 @@
 
 `Convex` is a typed Swift client and generator for Convex backends. Generated request values bind function identity, arguments, and output. `ConvexClient` reuses the official Rust runtime; `observe(_:)` returns a live Observation model.
 
-The implementation is under review in [PR #1](https://github.com/markmals/swift-convex/pull/1). No Swift library version has been released. The initial runtime supports arm64 iOS 17, iOS Simulator, and macOS 14 with Swift 6.4.
+No Swift library version has been released. The initial runtime supports arm64 iOS 17, iOS Simulator, and macOS 14 with Swift 6.4.
 
-## Preview dependency
+## Unreleased dependency
 
-Add the review branch while the first library release is pending:
+Use the `main` branch while the first library release is pending:
 
 ```swift
 .package(
     url: "https://github.com/markmals/swift-convex.git",
-    branch: "proposal/type-safe-swift-contracts"
+    branch: "main"
 )
 ```
 

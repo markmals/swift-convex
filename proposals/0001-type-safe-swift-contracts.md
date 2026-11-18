@@ -2,7 +2,7 @@
 id: proposal.0001
 title: Type-Safe Swift Contracts for Convex
 authors: [OpenAI coding assistant]
-status: active-review
+status: implemented
 pull-request: https://github.com/markmals/swift-convex/pull/1
 issues: []
 supersedes: []
@@ -295,6 +295,8 @@ This proposal defines one coherent feature: a generated, typed Swift client back
 
 The human approved implementation after incorporation of the Observable query integration requested in the final review. Successful implementation and human acceptance remain separate gates.
 
+The human accepted the implementation on 2026-11-18 and authorized merging PR #1 and cleaning up its branches and disposable backend. Delivery is merge-only; a versioned Swift library release and npm publication remain separately authorized operations. The native artifact remains available because the package depends on it.
+
 ### Out of scope
 
 - A new networking/sync engine or Linux runtime support, because this package reuses the official Rust client's protocol behavior and verifies only the approved initial platforms.
@@ -306,9 +308,9 @@ The human approved implementation after incorporation of the Observable query in
 
 ## Preview
 
-The design preview is this draft and its representative Swift call sites. No implementation is claimed.
+Design review used this proposal and its representative Swift call sites.
 
-The implementation preview is a private prerelease package plus the external `Consumer/` fixture targeting a disposable Convex backend. The reviewer generates a contract, compiles a valid call, observes an invalid call fail, receives a live update, and cancels a subscription. Provide access through the repository's private branch/artifact and environment-supplied deployment configuration. Remove the disposable deployment and credentials after review; keep credential-free fixtures as regression coverage.
+Implementation review used the private package branch, native artifact, and external `Consumer/` fixture with a disposable Convex backend. Verification covered valid and invalid compiled calls, live updates, and subscription cancellation. After acceptance, remove the feature and temporary review-baseline branches and reset the disposable backend, including its test data and generated credentials. Keep the credential-free fixtures as regression coverage and retain the native artifact required by the package.
 
 ## Policies and decisions checked
 

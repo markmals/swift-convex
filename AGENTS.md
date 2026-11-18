@@ -1,6 +1,6 @@
 # Swift Convex
 
-This Swift package follows the Workbench process, loaded from `.workbench`, a gitignored link restored by `mise install`. Proposal 0001 is approved for implementation. Keep its status `awaiting-implementation` until implementation review; do not infer human acceptance from passing checks.
+This Swift package follows the Workbench process, loaded from `.workbench`, a gitignored link restored by `mise install`.
 
 ## Boundaries
 
