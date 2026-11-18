@@ -1,6 +1,6 @@
 # Swift Convex
 
-`Convex` is a typed Swift client and generator for Convex backends. Generated request values bind function identity, arguments, and output. `ConvexClient` reuses the official Rust runtime; `query(_:)` returns a live Observation model.
+`Convex` is a typed Swift client and generator for Convex backends. Generated request values bind function identity, arguments, and output. `ConvexClient` reuses the official Rust runtime; `observe(_:)` returns a live Observation model.
 
 The implementation is under review in [PR #1](https://github.com/markmals/swift-convex/pull/1). No Swift library version has been released. The initial runtime supports arm64 iOS 17, iOS Simulator, and macOS 14 with Swift 6.4.
 
@@ -49,15 +49,15 @@ import Convex
 
 let client = ConvexClient(deploymentURL: deploymentURL)
 let request = API.Messages.List(channelID: channelID)
-let messages = client.query(request)
+let messages = client.observe(request)
 ```
 
 Keep `messages` in stable view state. Reading its `.state` in SwiftUI tracks `.loading`, `.value`, and `.failed` transitions as backend data changes.
 
-- `query(_:)` creates a live `@Observable` model.
-- `queryOnce(_:)` performs an async one-shot read.
-- `events(for:)` supplies a throwing async sequence of snapshots.
-- `mutate(_:)` and `callAction(_:)` accept only their matching request kinds.
+- `observe(_:)` creates a live `@Observable` model.
+- `fetch(_:)` performs an async one-shot read.
+- `snapshots(for:)` supplies a throwing async sequence of snapshots.
+- `execute(mutation:)` and `execute(action:)` accept only their matching request kinds.
 
 The [client guide](guides/using-convex.md) includes a SwiftUI view, cancellation rules, authentication, and typed mutation examples.
 

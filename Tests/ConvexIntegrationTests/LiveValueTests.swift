@@ -9,7 +9,7 @@ import Testing
 )
 struct LiveValueTests {
     @Test func inferredSpecialValuesDecodeThroughTheRustRuntime() async throws {
-        let special = try await liveClient().queryOnce(LiveAPI.Values.Special())
+        let special = try await liveClient().fetch(LiveAPI.Values.Special())
         #expect(special.nan.isNaN)
         #expect(special.positiveInfinity == .infinity)
         #expect(special.negativeInfinity == -.infinity)
@@ -46,7 +46,7 @@ struct LiveValueTests {
             string: "quotes \" and newline\n",
             union: .int64(.max)
         )
-        let response = try await liveClient().queryOnce(request)
+        let response = try await liveClient().fetch(request)
         #expect(response.array[0].isNaN)
         #expect(response.array[1] == .infinity)
         #expect(response.array[2] == -.infinity)

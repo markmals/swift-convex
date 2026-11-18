@@ -2,7 +2,7 @@ public import Observation
 
 /// A query's latest result, kept current on the main actor.
 ///
-/// Create one with ``ConvexClient/query(_:)``. Reading ``state`` participates in Observation
+/// Create one with ``ConvexClient/observe(_:)``. Reading ``state`` participates in Observation
 /// tracking, so a SwiftUI view that reads it updates as results arrive. The model owns one
 /// subscription for its whole lifetime, independent of view visibility; ``cancel()`` or
 /// deinitialization ends it.

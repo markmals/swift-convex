@@ -21,7 +21,7 @@ Keep the client for the application's connection lifetime. A generated request i
 
 ## Observe a live query
 
-On the main actor, `client.query(request)` returns a live `Query<API.Messages.List.Output>`. The model uses the system Observation framework, so reading its state in a SwiftUI view subscribes the view to state changes. Store the model in stable view state rather than constructing a new model each time `body` runs.
+On the main actor, `client.observe(request)` returns a live `Query<API.Messages.List.Output>`. The model uses the system Observation framework, so reading its state in a SwiftUI view subscribes the view to state changes. Store the model in stable view state rather than constructing a new model each time `body` runs.
 
 ```swift
 import Convex
@@ -32,7 +32,7 @@ struct MessagesView: View {
     @State private var messages: Query<API.Messages.List.Output>
 
     init(client: ConvexClient, channelID: DocumentID<API.Tables.Channels>) {
-        _messages = State(initialValue: client.query(API.Messages.List(channelID: channelID)))
+        _messages = State(initialValue: client.observe(API.Messages.List(channelID: channelID)))
     }
 
     var body: some View {
@@ -55,11 +55,11 @@ Loading, a successful nullable output, and failure are different states. A faile
 ## Consume snapshots as a sequence
 
 ```swift
-let events = client.events(for: request)
-defer { events.cancel() }
+let snapshots = client.snapshots(for: request)
+defer { snapshots.cancel() }
 
-for try await messages in events {
-    render(messages)
+for try await snapshot in snapshots {
+    render(snapshot)
 }
 ```
 
@@ -68,14 +68,14 @@ The sequence starts on iteration and supports one consumer. Create another seque
 ## Read once or perform an operation
 
 ```swift
-let currentMessages = try await client.queryOnce(request)
-let messageID = try await client.mutate(
-    API.Messages.Send(body: "Hello", channelID: channelID)
+let snapshot = try await client.fetch(request)
+let messageID = try await client.execute(
+    mutation: API.Messages.Send(body: "Hello", channelID: channelID)
 )
-try await client.callAction(API.Notifications.Deliver(messageID: messageID))
+try await client.execute(action: API.Notifications.Deliver(messageID: messageID))
 ```
 
-`queryOnce` uses the shared Rust client's one-shot query. The three methods accept only the matching request kind and infer their output from the request. Canceling a mutation/action wait does not imply server rollback or prove that the server did not execute it.
+`fetch(_:)` uses the shared Rust client's one-shot query. `execute(mutation:)` accepts only mutation requests; `execute(action:)` accepts only action requests. Each method infers its output from the request. Canceling a mutation/action wait does not imply server rollback or prove that the server did not execute it.
 
 ## Preserve wire meaning
 

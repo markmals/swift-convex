@@ -43,10 +43,9 @@ public final class ConvexClient: Observable, Sendable {
 
     /// Runs a query once and returns its current result.
     ///
-    /// A `nil` result of a nullable query is a successful value. Use ``query(_:)`` or
-    /// ``events(for:)`` to follow later changes.
-    public func queryOnce<Request: QueryRequest>(_ request: Request) async throws -> Request.Output
-    {
+    /// A `nil` result of a nullable query is a successful value. Use ``observe(_:)`` or
+    /// ``snapshots(for:)`` to follow later changes.
+    public func fetch<Request: QueryRequest>(_ request: Request) async throws -> Request.Output {
         try await perform(request, as: .query)
     }
 
@@ -55,7 +54,8 @@ public final class ConvexClient: Observable, Sendable {
     /// Canceling the calling task stops the wait, not the mutation: the server may still
     /// commit it.
     @discardableResult
-    public func mutate<Request: MutationRequest>(_ request: Request) async throws -> Request.Output
+    public func execute<Request: MutationRequest>(mutation request: Request) async throws
+        -> Request.Output
     {
         try await perform(request, as: .mutation)
     }
@@ -65,7 +65,7 @@ public final class ConvexClient: Observable, Sendable {
     /// Actions are never retried automatically. Canceling the calling task stops the wait,
     /// not the action: its side effects may still happen.
     @discardableResult
-    public func callAction<Request: ActionRequest>(_ request: Request) async throws
+    public func execute<Request: ActionRequest>(action request: Request) async throws
         -> Request.Output
     {
         try await perform(request, as: .action)
@@ -90,10 +90,12 @@ public final class ConvexClient: Observable, Sendable {
 
     // MARK: - Live queries
 
-    /// Returns a sequence of the query's results, starting when it is first iterated.
+    /// Returns query snapshots, starting when the sequence is first iterated.
     ///
     /// Each call creates an independent subscription for a single consumer.
-    public func events<Request: QueryRequest>(for request: Request) -> QueryEvents<Request.Output> {
+    public func snapshots<Request: QueryRequest>(for request: Request) -> QueryEvents<
+        Request.Output
+    > {
         let transport = transport
         return QueryEvents(functionPath: Request.functionPath) { onUpdate, onError in
             try await transport.subscribe(
@@ -111,8 +113,8 @@ public final class ConvexClient: Observable, Sendable {
     /// deinitialized. Keep it in stable state, such as a view's `@State`, rather than
     /// recreating it in `body`; create a new model when the request changes.
     @MainActor
-    public func query<Request: QueryRequest>(_ request: Request) -> Query<Request.Output> {
-        Query(events: events(for: request))
+    public func observe<Request: QueryRequest>(_ request: Request) -> Query<Request.Output> {
+        Query(events: snapshots(for: request))
     }
 
     // MARK: - Status and authentication

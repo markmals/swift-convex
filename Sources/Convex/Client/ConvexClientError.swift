@@ -19,7 +19,7 @@ public enum ConvexClientError: Error, Sendable {
     /// `underlying` is usually a `DecodingError` whose coding path locates the mismatch.
     case decoding(functionPath: String, underlying: any Error)
 
-    /// A ``QueryEvents`` value was iterated more than once; call ``ConvexClient/events(for:)``
+    /// A ``QueryEvents`` value was iterated more than once; call ``ConvexClient/snapshots(for:)``
     /// for each independent consumer.
     case eventsAlreadyIterated
 }

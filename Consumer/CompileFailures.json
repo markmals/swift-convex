@@ -7,7 +7,7 @@
     {
         "name": "wrong-operation-kind",
         "diagnostic": "QueryRequest",
-        "source": "import Convex\nfunc invalidRequest(_ client: ConvexClient, channelID: DocumentID<API.Tables.Channels>) async throws {\n    _ = try await client.queryOnce(API.Messages.Send(body: \"hello\", channelID: channelID))\n}\n"
+        "source": "import Convex\nfunc invalidRequest(_ client: ConvexClient, channelID: DocumentID<API.Tables.Channels>) async throws {\n    _ = try await client.fetch(API.Messages.Send(body: \"hello\", channelID: channelID))\n}\n"
     },
     {
         "name": "missing-required-argument",
@@ -17,6 +17,16 @@
     {
         "name": "caller-selected-output",
         "diagnostic": "cannot convert",
-        "source": "import Convex\nfunc invalidRequest(_ client: ConvexClient, channelID: DocumentID<API.Tables.Channels>) async throws {\n    let _: String = try await client.queryOnce(API.Messages.List(channelID: channelID))\n}\n"
+        "source": "import Convex\nfunc invalidRequest(_ client: ConvexClient, channelID: DocumentID<API.Tables.Channels>) async throws {\n    let _: String = try await client.fetch(API.Messages.List(channelID: channelID))\n}\n"
+    },
+    {
+        "name": "action-as-mutation",
+        "diagnostic": "MutationRequest",
+        "source": "import Convex\nfunc invalidRequest(_ client: ConvexClient, messageID: DocumentID<API.Tables.Messages>) async throws {\n    _ = try await client.execute(mutation: API.Notifications.Deliver(messageID: messageID))\n}\n"
+    },
+    {
+        "name": "mutation-as-action",
+        "diagnostic": "ActionRequest",
+        "source": "import Convex\nfunc invalidRequest(_ client: ConvexClient, channelID: DocumentID<API.Tables.Channels>) async throws {\n    _ = try await client.execute(action: API.Messages.Send(body: \"hello\", channelID: channelID))\n}\n"
     }
 ]

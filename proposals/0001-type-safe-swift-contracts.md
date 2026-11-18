@@ -86,17 +86,18 @@ import Convex
 let convex = ConvexClient(deploymentURL: deploymentURL)
 let list = API.Messages.List(channelID: channel.id)
 
-let messages = convex.query(list)
+let messages = convex.observe(list)
+let snapshot = try await convex.fetch(list)
 
-let messageID = try await convex.mutate(
-    API.Messages.Send(channelID: channel.id, body: "Hello")
+let messageID = try await convex.execute(
+    mutation: API.Messages.Send(channelID: channel.id, body: "Hello")
 )
 
-try await convex.callAction(
-    API.Notifications.Deliver(messageID: messageID)
+try await convex.execute(
+    action: API.Notifications.Deliver(messageID: messageID)
 )
 
-let updates = convex.events(for: list)
+let updates = convex.snapshots(for: list)
 defer { updates.cancel() }
 
 for try await messages in updates {
@@ -104,9 +105,9 @@ for try await messages in updates {
 }
 ```
 
-These are proposed interfaces, not runnable examples today. `API.Messages.List` is a request type whose initializer captures its arguments; constructing it performs no I/O. Its static contract fixes the backend address, query kind, and result type. `API.Messages.Send` fixes the type of `messageID`. Passing a `Send` request to `query` or `events(for:)`, or another table's ID to `channelID`, is a compile error.
+These are proposed interfaces, not runnable examples today. `API.Messages.List` is a request type whose initializer captures its arguments; constructing it performs no I/O. Its static contract fixes the backend address, query kind, and result type. `API.Messages.Send` fixes the type of `messageID`. Passing a `Send` request to `observe`, `fetch`, or `snapshots(for:)`, or another table's ID to `channelID`, is a compile error.
 
-`messages` is a main-actor-isolated `@Observable` `Query<Output>` model. Its `state` distinguishes `.loading`, `.value(Output)`, and `.failed(Error)`; a successful nullable output remains distinct from loading. Reading state in a SwiftUI view participates in Observation tracking and updates the view as results arrive. Retain the model in stable view state, rather than recreating it in `body`. `queryOnce(_:)` supplies the explicit async one-shot operation.
+`messages` is a main-actor-isolated `@Observable` `Query<Output>` model. Its `state` distinguishes `.loading`, `.value(Output)`, and `.failed(Error)`; a successful nullable output remains distinct from loading. Reading state in a SwiftUI view participates in Observation tracking and updates the view as results arrive. Retain the model in stable view state, rather than recreating it in `body`. `fetch(_:)` supplies the explicit async one-shot operation.
 
 ## Detailed design
 
@@ -177,15 +178,17 @@ Swift nominal typing cannot preserve every TypeScript structural assignment. End
 
 Generate one immutable, `Sendable` request struct per function. `API.Messages.List` stores `channelID` directly and conforms to `QueryRequest`; `API.Messages.Send` conforms to `MutationRequest`; `API.Notifications.Deliver` conforms to `ActionRequest`. The three protocols share the request encoding contract, and each request fixes its `Output` associated type and static backend address. There is no independent reference and arguments pair at the call site.
 
-| Operation        | Accepted request  | Result                                                                       |
-| ---------------- | ----------------- | ---------------------------------------------------------------------------- |
-| `query(_:)`      | `QueryRequest`    | A main-actor-isolated, live `@Observable` `Query<Request.Output>`.           |
-| `queryOnce(_:)`  | `QueryRequest`    | One decoded `Request.Output`, asynchronously.                                |
-| `events(for:)`   | `QueryRequest`    | `QueryEvents<Request.Output>`, a throwing async sequence of query snapshots. |
-| `mutate(_:)`     | `MutationRequest` | One decoded `Request.Output`, asynchronously.                                |
-| `callAction(_:)` | `ActionRequest`   | One decoded `Request.Output`, asynchronously.                                |
+| Operation            | Accepted request  | Result                                                                       |
+| -------------------- | ----------------- | ---------------------------------------------------------------------------- |
+| `observe(_:)`        | `QueryRequest`    | A main-actor-isolated, live `@Observable` `Query<Request.Output>`.           |
+| `fetch(_:)`          | `QueryRequest`    | One decoded `Request.Output`, asynchronously.                                |
+| `snapshots(for:)`    | `QueryRequest`    | `QueryEvents<Request.Output>`, a throwing async sequence of query snapshots. |
+| `execute(mutation:)` | `MutationRequest` | One decoded `Request.Output`, asynchronously.                                |
+| `execute(action:)`   | `ActionRequest`   | One decoded `Request.Output`, asynchronously.                                |
 
 Each method is generic over the concrete request, rather than an unconstrained output type. The same query value can be reused for one-shot execution and observation. Constructing or copying it does not start a request or allocate a second arguments wrapper. No-argument functions use their request's empty initializer, such as `API.Health.Check()`. Initializers require every required field and give only genuinely optional fields an omission default. A required nullable field still requires an explicit argument.
+
+The `execute` argument label selects the operation kind, enforced by its matching request protocol; an action cannot be passed as a mutation or vice versa. There is no unlabeled `execute` overload. These entry points replace the earlier client method names without compatibility aliases. Generated request names, namespaces, result types, and operation behavior remain unchanged.
 
 The protocols are public so generated requests in a consumer module can conform. Handwritten conformances are an explicit trust boundary and do not prove agreement with the backend. Ordinary client methods accept only request values; they have no raw-string overload or result-type parameter.
 
@@ -199,7 +202,7 @@ The root namespace is configurable so an application can import contracts for mo
 
 Use the existing `convex-mobile` Rust/UniFFI bridge as the starting boundary, with generated Swift bindings hidden behind an internal target. Pin its source revision, Rust dependency lockfile, UniFFI version, and generated bindings together. Do not expose UniFFI objects or callback protocols in the public Swift API. This is an FFI and packaging responsibility, not a new implementation of the Convex protocol.
 
-The [native interface](https://github.com/convex/convex-mobile/blob/f1a074ac2a4581f6f10f274eb237de05bbc91092/rust/src/convex-mobile.udl) already exposes a one-shot `query`. Call that from `queryOnce(_:)` rather than reproducing subscribe-then-first in Swift. `query(_:)` creates the Observable model and owns a subscription through the same event-delivery boundary as `events(for:)`. `mutate(_:)` and `callAction(_:)` call the corresponding native operations and decode the request's fixed output. Null is a successful value. Use the same native client for all operations and do not introduce a separate HTTP transport.
+The [native interface](https://github.com/convex/convex-mobile/blob/f1a074ac2a4581f6f10f274eb237de05bbc91092/rust/src/convex-mobile.udl) already exposes a one-shot `query`. Call that from `fetch(_:)` rather than reproducing subscribe-then-first in Swift. `observe(_:)` creates the Observable model and owns a subscription through the same snapshot-delivery boundary as `snapshots(for:)`. `execute(mutation:)` and `execute(action:)` call the corresponding native operations and decode the request's fixed output. Null is a successful value. Use the same native client for all operations and do not introduce a separate HTTP transport.
 
 The bridge takes an argument-name map whose values are Convex-encoded JSON strings and returns Convex-encoded JSON payloads. Encode request fields directly: an absent key is omission; a present null-encoding value is null. Escape nested keys and preserve scalar envelopes at every nesting level. Decode responses once through our codec, preserving decoding errors and coding paths directly. No SDK-specific `ConvexEncodable` conformers, numeric wrappers, or decoding-outcome workaround remain. Avoid a generic JSON-tree round-trip for statically typed requests; the strings and FFI transfers required by this bridge are measurable boundary costs.
 
@@ -207,11 +210,11 @@ The inspected bridge [parses arguments with `expect`](https://github.com/convex/
 
 Make `ConvexClient` safely shareable through compiler-checked `Sendable` storage backed by isolated native ownership. Calls must be usable from the main actor without making the library main-actor-only. Native callbacks arrive on Rust runtime threads; serialized Swift lifetime state owns their delivery, cancellation, and teardown. Audit generated FFI concurrency assumptions and prove them under Swift 6. Do not add unchecked conformances or unsafe isolation annotations merely to suppress diagnostics.
 
-`query(_:)` is a synchronous main-actor factory for `Query<Output>`, implemented with Swift's built-in Observation support. The model begins loading and owns one task consuming query events. Each received result replaces its state with `.value`; a terminal failure becomes `.failed`, never an empty or fabricated value. All observable mutations occur on the main actor. Explicit cancellation or model deinitialization cancels the task and subscription, without a task-to-model retain cycle. Reusing a model keeps its subscription; changing a request creates a new model. The model's lifetime follows its owner, not mere view visibility.
+`observe(_:)` is a synchronous main-actor factory for `Query<Output>`, implemented with Swift's built-in Observation support. The model begins loading and owns one task consuming query snapshots. Each received result replaces its state with `.value`; a terminal failure becomes `.failed`, never an empty or fabricated value. All observable mutations occur on the main actor. Explicit cancellation or model deinitialization cancels the task and subscription, without a task-to-model retain cycle. Reusing a model keeps its subscription; changing a request creates a new model. The model's lifetime follows its owner, not mere view visibility.
 
-`events(for:)` returns a `QueryEvents<Output>` async sequence with synchronous, idempotent `cancel()`. Creating it performs no network operation; its single iterator starts one subscription. Use a new `events(for:)` call for another independent consumer. Establish buffering and callback ownership before native registration can emit an initial value. Task cancellation, iterator release, explicit cancellation, and terminal error tear down that subscription. If cancellation wins the registration race, cancel the native handle as soon as it arrives. After cancellation takes effect, discard buffered and late native updates instead of forwarding them to the consumer. A retained sequence can outlive an early loop exit, so use `defer` when deterministic teardown is needed.
+`snapshots(for:)` returns a `QueryEvents<Output>` async sequence with synchronous, idempotent `cancel()`. Creating it performs no network operation; its single iterator starts one subscription. Use a new `snapshots(for:)` call for another independent consumer. Establish buffering and callback ownership before native registration can emit an initial value. Task cancellation, iterator release, explicit cancellation, and terminal error tear down that subscription. If cancellation wins the registration race, cancel the native handle as soon as it arrives. After cancellation takes effect, discard buffered and late native updates instead of forwarding them to the consumer. A retained sequence can outlive an early loop exit, so use `defer` when deterministic teardown is needed.
 
-Despite the method name, query events carry result snapshots, not a durable event log. Use a bounded newest-snapshot buffer and document coalescing for a slow consumer. Preserve callback order before coalescing. Forward reconnection to the Rust client; a terminal error ends this sequence and cancels its handle. Do not silently resubscribe, replace failures with empty collections, or invent automatic action retries.
+Query snapshots represent current results, not a durable event log. Use a bounded newest-snapshot buffer and document coalescing for a slow consumer. Preserve callback order before coalescing. Forward reconnection to the Rust client; a terminal error ends this sequence and cancels its handle. Do not silently resubscribe, replace failures with empty collections, or invent automatic action retries.
 
 For one-shot calls, connect Swift task cancellation to the owned native future where the pinned bridge permits it. Completion and cancellation must settle the Swift waiter exactly once; if cancellation wins, it throws `CancellationError` rather than returning a fabricated result. Prove resource release independently of that Swift result. The bridge's cancellation behavior is an implementation gate, not an inherited Swift SDK guarantee. In particular, a mutation or action may execute after the caller cancels, so canceling a wait never implies server rollback.
 
@@ -267,7 +270,7 @@ Implementation proceeds through these dependent proofs, all within the proposal'
 
 1. In the backend exporter, extract a representative project containing an inferred result without a return validator, a schema document, a branded ID, optional/null fields, a union, and all three callable function kinds. Compare the exported contract with TypeScript's public helper types. Establish compiler/Convex versions and give the Swift generator only the resulting neutral artifact.
 2. Build the pinned Rust runtime/bridge and generated bindings for every approved slice. Prove Swift 6 ownership and native callback ordering. Round-trip supported scalar/composite values across the FFI boundary, including Int64 boundaries, nonfinite doubles, signed zero, bytes, omitted/null fields, escaped keys, and nested collections. Invalid payloads must fail without a native panic. Verify the binary checksum/provenance and subscription leak fix.
-3. Compile an external Swift consumer using `import Convex`, `ConvexClient`, and constructed requests such as `API.Messages.List(channelID:)`. Wrong initializer labels/types, missing required fields, wrong-table IDs, wrong operation kind, and internal-function requests must fail compilation for the intended reason. Regeneration must update or remove changed request declarations. Reusing a query request with `query(_:)`, `queryOnce(_:)`, and `events(for:)` must work. Exercise Observation tracking through loading, live values, a successful null, and errors, including cancellation and model deinitialization.
+3. Compile an external Swift consumer using `import Convex`, `ConvexClient`, and constructed requests such as `API.Messages.List(channelID:)`. Wrong initializer labels/types, missing required fields, wrong-table IDs, wrong operation kind, and internal-function requests must fail compilation for the intended reason. Regeneration must update or remove changed request declarations. Reusing a query request with `observe(_:)`, `fetch(_:)`, and `snapshots(for:)` must work. Exercise Observation tracking through loading, live values, a successful null, and errors, including cancellation and model deinitialization.
 4. Exercise both plugin hosts and the Rust-backed runtime: deterministic generation, unsupported-type diagnostics, drift checks, generation without TypeScript or Cargo installed, clean offline builds after dependency resolution, native one-shot queries, cached initial subscription values, early cancellation, callback/cancel races, reconnect, auth refresh and provider replacement/logout, task cancellation, and teardown against a disposable backend.
 
 Use Swift Testing and the template's tagged-dependency `Consumer/` harness for public API verification. Snapshot tests supplement compiled consumers; they cannot establish type safety alone. Native bridge tests cover malformed inputs and lifetime races. Backend integration checks use a versioned fixture from the exporter project and run in an explicitly configured CI job with isolated test data and secrets, never inside a consumer's build plugin.
@@ -288,7 +291,7 @@ The application cost is a generated-artifact workflow and the native runtime dep
 
 ## Scope
 
-This proposal defines one coherent feature: a generated, typed Swift client backed by the same Rust runtime as the official mobile client. Delivery includes the separate backend exporter, neutral format, Swift codecs and request/result types, live Observable queries, async query events, one-shot operations, authentication/lifetime boundary, native artifact distribution, generator, both plugin workflows, documentation, and the proofs above.
+This proposal defines one coherent feature: a generated, typed Swift client backed by the same Rust runtime as the official mobile client. Delivery includes the separate backend exporter, neutral format, Swift codecs and request/result types, live Observable queries, async query snapshots, one-shot operations, authentication/lifetime boundary, native artifact distribution, generator, both plugin workflows, documentation, and the proofs above.
 
 The human approved implementation after incorporation of the Observable query integration requested in the final review. Successful implementation and human acceptance remain separate gates.
 
@@ -327,6 +330,6 @@ An optional model-coding macro could help teams writing custom Swift boundary ty
 
 ## Open questions
 
-None. The reviewed API uses `Convex`, `ConvexClient`, constructed requests, Observable `query(_:)`, one-shot `queryOnce(_:)`, `callAction(_:)`, and `events(for:)`. `mutate(_:)` keeps its name. The backend exports a neutral contract through separate TypeScript tooling, and the runtime reuses the official Rust client. The approved initial scope is arm64 iOS/macOS without a custom macro package.
+None. The reviewed API uses `Convex`, `ConvexClient`, constructed requests, Observable `observe(_:)`, one-shot `fetch(_:)`, `snapshots(for:)`, `execute(mutation:)`, and `execute(action:)`. Generated request names and namespaces remain unchanged. The backend exports a neutral contract through separate TypeScript tooling, and the runtime reuses the official Rust client. The approved initial scope is arm64 iOS/macOS without a custom macro package.
 
 The human explicitly authorized the transition to `awaiting-implementation` after the [Observable query comment](https://github.com/markmals/swift-convex/pull/1#discussion_r4607336963) was incorporated. Native ownership, Observation lifetime, codecs, artifact distribution, and compiler-version compatibility remain engineering verification gates. A contradiction that changes the approved behavior requires a design revision rather than a silent reduction in scope.

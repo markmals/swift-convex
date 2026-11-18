@@ -6,11 +6,11 @@ import Testing
 struct ClientOperationTests {
     typealias Fixtures = ClientFixtures
 
-    @Test func queryOnceRunsNativeQueryAndDecodesOutput() async throws {
+    @Test func fetchRunsNativeQueryAndDecodesOutput() async throws {
         let transport = Fixtures.Transport(respond: { _ in #""hello""# })
         let client = transport.makeClient()
 
-        let output = try await client.queryOnce(Fixtures.LatestMessage(channel: "general"))
+        let output = try await client.fetch(Fixtures.LatestMessage(channel: "general"))
 
         #expect(output == "hello")
         let expectedArguments = ["channel": try ConvexCodec.encode("general")]
@@ -32,11 +32,11 @@ struct ClientOperationTests {
         })
         let client = transport.makeClient()
 
-        let messageID = try await client.mutate(
-            Fixtures.SendMessage(channel: "general", body: "Hi")
+        let messageID = try await client.execute(
+            mutation: Fixtures.SendMessage(channel: "general", body: "Hi")
         )
-        let delivered = try await client.callAction(
-            Fixtures.DeliverNotification(messageID: messageID)
+        let delivered = try await client.execute(
+            action: Fixtures.DeliverNotification(messageID: messageID)
         )
 
         #expect(messageID == "message-1")
@@ -51,7 +51,7 @@ struct ClientOperationTests {
         let transport = Fixtures.Transport(respond: { _ in "null" })
         let client = transport.makeClient()
 
-        let output = try await client.queryOnce(Fixtures.OptionalMessage(channel: "general"))
+        let output = try await client.fetch(Fixtures.OptionalMessage(channel: "general"))
 
         #expect(output == nil)
     }
@@ -61,7 +61,7 @@ struct ClientOperationTests {
         let client = transport.makeClient()
 
         let error = await #expect(throws: ConvexClientError.self) {
-            try await client.queryOnce(Fixtures.LatestMessage(channel: "general"))
+            try await client.fetch(Fixtures.LatestMessage(channel: "general"))
         }
 
         guard case .decoding(let functionPath, let underlying)? = error else {
@@ -77,7 +77,7 @@ struct ClientOperationTests {
         let client = transport.makeClient()
 
         let error = await #expect(throws: ConvexClientError.self) {
-            try await client.queryOnce(Fixtures.UnencodableQuery())
+            try await client.fetch(Fixtures.UnencodableQuery())
         }
 
         guard case .encoding(let functionPath, let underlying)? = error else {
@@ -98,7 +98,7 @@ struct ClientOperationTests {
         let client = transport.makeClient()
 
         let error = await #expect(throws: ConvexClientError.self) {
-            try await client.mutate(Fixtures.SendMessage(channel: "general", body: "Hi"))
+            try await client.execute(mutation: Fixtures.SendMessage(channel: "general", body: "Hi"))
         }
 
         guard case .application(let failure)? = error else {

@@ -9,7 +9,7 @@ title: Verifying Swift Convex
 
 ## Tagged consumer and private artifacts
 
-`mise run test:consumer` copies the current source snapshot into an isolated repository, tags the version in `Consumer/Package.swift`, and resolves it as a normal SwiftPM dependency. It compiles generated requests and the SwiftUI Observation example without `@testable`, then proves that wrong-table IDs, wrong operation kinds, omitted required arguments, and caller-selected output types are rejected by the compiler.
+`mise run test:consumer` copies the current source snapshot into an isolated repository, tags the version in `Consumer/Package.swift`, and resolves it as a normal SwiftPM dependency. It compiles generated requests and the SwiftUI Observation example without `@testable`, then proves that wrong-table IDs, wrong operation kinds (including swapped `execute` labels), omitted required arguments, and caller-selected output types are rejected by the compiler.
 
 The consumer deliberately ignores `CONVEX_NATIVE_LOCAL` and downloads the published native artifact. While the repository is private, supply an API-host credential through SwiftPM's normal stores or set `CONVEX_TEST_NETRC` to an external mode-0600 netrc file. GitHub source-repository credentials and binary-download credentials may use different hosts. No token belongs in this repository.
 

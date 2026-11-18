@@ -16,7 +16,7 @@ struct LiveAuthenticationTests {
         let token = try String(contentsOf: URL(fileURLWithPath: tokenPath), encoding: .utf8)
             .trimmingCharacters(in: .whitespacesAndNewlines)
         let client = try liveClient()
-        let identity = client.query(LiveAPI.Auth.Whoami())
+        let identity = client.observe(LiveAPI.Auth.Whoami())
         defer { identity.cancel() }
         #expect(try await queryValue(identity) { $0 == nil } == nil)
 

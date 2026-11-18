@@ -6,7 +6,7 @@ private struct MessagesView: View {
     @State private var messages: Query<API.Messages.List.Output>
 
     init(client: ConvexClient, channelID: DocumentID<API.Tables.Channels>) {
-        _messages = State(initialValue: client.query(API.Messages.List(channelID: channelID)))
+        _messages = State(initialValue: client.observe(API.Messages.List(channelID: channelID)))
     }
 
     var body: some View {

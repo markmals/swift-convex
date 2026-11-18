@@ -12,20 +12,22 @@ import Testing
 struct LiveBackendTests {
     @Test func observableQueryAndSequenceFollowRealMutations() async throws {
         let client = try liveClient()
-        let channelID = try await client.mutate(LiveAPI.Channels.Create(name: "swift-\(UUID())"))
+        let channelID = try await client.execute(
+            mutation: LiveAPI.Channels.Create(name: "swift-\(UUID())")
+        )
         let request = LiveAPI.Messages.List(channelID: channelID)
-        let query = client.query(request)
+        let query = client.observe(request)
         defer { query.cancel() }
         let initial = try await queryValue(query) { $0.isEmpty }
         #expect(initial.isEmpty)
 
-        let events = client.events(for: request)
+        let events = client.snapshots(for: request)
         defer { events.cancel() }
         var iterator = events.makeAsyncIterator()
         #expect(try await iterator.next()?.isEmpty == true)
 
-        let messageID = try await client.mutate(
-            LiveAPI.Messages.Send(body: "Swift live proof", channelID: channelID)
+        let messageID = try await client.execute(
+            mutation: LiveAPI.Messages.Send(body: "Swift live proof", channelID: channelID)
         )
         let messages = try await queryValue(query) { $0.contains { $0.id == messageID } }
         let message = try #require(messages.first { $0.id == messageID })
@@ -36,28 +38,28 @@ struct LiveBackendTests {
         let event = try #require(try await iterator.next())
         #expect(event.contains { $0.id == messageID })
 
-        let summary = try await client.callAction(
-            LiveAPI.Actions.ChannelSummary(channelID: channelID)
+        let summary = try await client.execute(
+            action: LiveAPI.Actions.ChannelSummary(channelID: channelID)
         )
         #expect(summary.channelID == channelID)
         #expect(summary.messageCount == 1)
         let channel = try #require(
-            try await client.queryOnce(LiveAPI.Channels.Get(channelID: channelID))
+            try await client.fetch(LiveAPI.Channels.Get(channelID: channelID))
         )
         #expect(channel.messageCount == 1)
-        let updated = try await client.mutate(
-            LiveAPI.Channels.SetTopic(channelID: channelID, topic: nil)
+        let updated = try await client.execute(
+            mutation: LiveAPI.Channels.SetTopic(channelID: channelID, topic: nil)
         )
         #expect(updated == ConvexNull())
     }
 
     @Test func successfulNullIsObservableValue() async throws {
         let client = try liveClient()
-        let query = client.query(LiveAPI.Auth.Whoami())
+        let query = client.observe(LiveAPI.Auth.Whoami())
         defer { query.cancel() }
         let identity = try await queryValue(query) { _ in true }
         #expect(identity == nil)
-        #expect(try await client.queryOnce(LiveAPI.Auth.Whoami()) == nil)
+        #expect(try await client.fetch(LiveAPI.Auth.Whoami()) == nil)
     }
 }
 

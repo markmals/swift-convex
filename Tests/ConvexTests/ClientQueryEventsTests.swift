@@ -8,7 +8,9 @@ struct ClientQueryEventsTests {
 
     @Test func creatingEventsDoesNotSubscribe() {
         let transport = Fixtures.Transport()
-        let events = transport.makeClient().events(for: Fixtures.LatestMessage(channel: "general"))
+        let events = transport.makeClient().snapshots(
+            for: Fixtures.LatestMessage(channel: "general")
+        )
 
         events.cancel()
 
@@ -17,7 +19,9 @@ struct ClientQueryEventsTests {
 
     @Test func valueDeliveredBeforeRegistrationReturnsIsNotDropped() async throws {
         let transport = Fixtures.Transport(beforeReturningSubscription: { $0.emit(#""cached""#) })
-        let events = transport.makeClient().events(for: Fixtures.LatestMessage(channel: "general"))
+        let events = transport.makeClient().snapshots(
+            for: Fixtures.LatestMessage(channel: "general")
+        )
         defer { events.cancel() }
         var iterator = events.makeAsyncIterator()
 
@@ -35,7 +39,9 @@ struct ClientQueryEventsTests {
             subscription.emit(#""second""#)
             subscription.emit(#""third""#)
         })
-        let events = transport.makeClient().events(for: Fixtures.LatestMessage(channel: "general"))
+        let events = transport.makeClient().snapshots(
+            for: Fixtures.LatestMessage(channel: "general")
+        )
         defer { events.cancel() }
         var iterator = events.makeAsyncIterator()
 
@@ -50,7 +56,9 @@ struct ClientQueryEventsTests {
             subscription.emit(#""latest""#)
             subscription.fail(message: "Uncaught ConvexError", data: #""rate limited""#)
         })
-        let events = transport.makeClient().events(for: Fixtures.LatestMessage(channel: "general"))
+        let events = transport.makeClient().snapshots(
+            for: Fixtures.LatestMessage(channel: "general")
+        )
         var iterator = events.makeAsyncIterator()
 
         #expect(try await iterator.next() == "latest")
@@ -70,7 +78,9 @@ struct ClientQueryEventsTests {
 
     @Test func serverErrorEndsSequence() async throws {
         let transport = Fixtures.Transport()
-        let events = transport.makeClient().events(for: Fixtures.LatestMessage(channel: "general"))
+        let events = transport.makeClient().snapshots(
+            for: Fixtures.LatestMessage(channel: "general")
+        )
         let consumer = Task {
             var iterator = events.makeAsyncIterator()
             return try await iterator.next()
@@ -92,7 +102,9 @@ struct ClientQueryEventsTests {
     @Test func cancellationReturnsBeforeRegistrationAndCancelsLateHandle() async throws {
         let gate = Fixtures.Gate()
         let transport = Fixtures.Transport(beforeReturningSubscription: { _ in await gate.wait() })
-        let events = transport.makeClient().events(for: Fixtures.LatestMessage(channel: "general"))
+        let events = transport.makeClient().snapshots(
+            for: Fixtures.LatestMessage(channel: "general")
+        )
         let consumer = Task {
             var iterator = events.makeAsyncIterator()
             return try await iterator.next()
@@ -111,7 +123,9 @@ struct ClientQueryEventsTests {
 
     @Test func taskCancellationEndsIterationAndCancelsSubscription() async throws {
         let transport = Fixtures.Transport()
-        let events = transport.makeClient().events(for: Fixtures.LatestMessage(channel: "general"))
+        let events = transport.makeClient().snapshots(
+            for: Fixtures.LatestMessage(channel: "general")
+        )
         let consumer = Task {
             var iterator = events.makeAsyncIterator()
             return try await iterator.next()
@@ -127,7 +141,9 @@ struct ClientQueryEventsTests {
 
     @Test func explicitCancellationDiscardsBufferedAndLateResults() async throws {
         let transport = Fixtures.Transport(beforeReturningSubscription: { $0.emit(#""first""#) })
-        let events = transport.makeClient().events(for: Fixtures.LatestMessage(channel: "general"))
+        let events = transport.makeClient().snapshots(
+            for: Fixtures.LatestMessage(channel: "general")
+        )
         var iterator = events.makeAsyncIterator()
         #expect(try await iterator.next() == "first")
         let subscription = try #require(transport.subscriptions.only)
@@ -146,7 +162,9 @@ struct ClientQueryEventsTests {
 
     @Test func releasingIteratorCancelsSubscription() async throws {
         let transport = Fixtures.Transport(beforeReturningSubscription: { $0.emit(#""first""#) })
-        let events = transport.makeClient().events(for: Fixtures.LatestMessage(channel: "general"))
+        let events = transport.makeClient().snapshots(
+            for: Fixtures.LatestMessage(channel: "general")
+        )
 
         do {
             var iterator = events.makeAsyncIterator()
@@ -161,7 +179,9 @@ struct ClientQueryEventsTests {
 
     @Test func secondIteratorIsRejectedWithoutSubscribing() async throws {
         let transport = Fixtures.Transport(beforeReturningSubscription: { $0.emit(#""first""#) })
-        let events = transport.makeClient().events(for: Fixtures.LatestMessage(channel: "general"))
+        let events = transport.makeClient().snapshots(
+            for: Fixtures.LatestMessage(channel: "general")
+        )
         defer { events.cancel() }
         var first = events.makeAsyncIterator()
         var second = events.makeAsyncIterator()
@@ -179,7 +199,9 @@ struct ClientQueryEventsTests {
 
     @Test func undecodableSnapshotEndsSequenceWithEndpoint() async throws {
         let transport = Fixtures.Transport(beforeReturningSubscription: { $0.emit("42") })
-        let events = transport.makeClient().events(for: Fixtures.LatestMessage(channel: "general"))
+        let events = transport.makeClient().snapshots(
+            for: Fixtures.LatestMessage(channel: "general")
+        )
         var iterator = events.makeAsyncIterator()
 
         let error = await #expect(throws: ConvexClientError.self) { try await iterator.next() }
@@ -197,7 +219,7 @@ struct ClientQueryEventsTests {
 
     @Test func unencodableArgumentsFailFirstIterationWithoutSubscribing() async throws {
         let transport = Fixtures.Transport()
-        let events = transport.makeClient().events(for: Fixtures.UnencodableQuery())
+        let events = transport.makeClient().snapshots(for: Fixtures.UnencodableQuery())
         var iterator = events.makeAsyncIterator()
 
         let error = await #expect(throws: ConvexClientError.self) { try await iterator.next() }
@@ -214,7 +236,9 @@ struct ClientQueryEventsTests {
         let transport = Fixtures.Transport(beforeReturningSubscription: { _ in
             throw ConvexClientError.runtime(message: "invalid arguments")
         })
-        let events = transport.makeClient().events(for: Fixtures.LatestMessage(channel: "general"))
+        let events = transport.makeClient().snapshots(
+            for: Fixtures.LatestMessage(channel: "general")
+        )
         var iterator = events.makeAsyncIterator()
 
         let error = await #expect(throws: ConvexClientError.self) { try await iterator.next() }

@@ -9,7 +9,7 @@ struct ObservationQueryTests {
 
     @Test func liveResultsReplaceLoadingThroughObservation() async throws {
         let transport = Fixtures.Transport()
-        let query = transport.makeClient().query(Fixtures.LatestMessage(channel: "general"))
+        let query = transport.makeClient().observe(Fixtures.LatestMessage(channel: "general"))
         defer { query.cancel() }
         #expect(query.state.isLoading)
         let subscription = await transport.nextRegistration()
@@ -24,7 +24,7 @@ struct ObservationQueryTests {
 
     @Test func cachedValueDeliveredDuringRegistrationReachesModel() async throws {
         let transport = Fixtures.Transport(beforeReturningSubscription: { $0.emit(#""cached""#) })
-        let query = transport.makeClient().query(Fixtures.LatestMessage(channel: "general"))
+        let query = transport.makeClient().observe(Fixtures.LatestMessage(channel: "general"))
         defer { query.cancel() }
 
         let state = await stateChange(of: query)
@@ -34,7 +34,7 @@ struct ObservationQueryTests {
 
     @Test func nullResultIsValueNotLoading() async throws {
         let transport = Fixtures.Transport()
-        let query = transport.makeClient().query(Fixtures.OptionalMessage(channel: "general"))
+        let query = transport.makeClient().observe(Fixtures.OptionalMessage(channel: "general"))
         defer { query.cancel() }
         #expect(query.state.isLoading)
         let subscription = await transport.nextRegistration()
@@ -47,7 +47,7 @@ struct ObservationQueryTests {
 
     @Test func serverErrorBecomesFailedState() async throws {
         let transport = Fixtures.Transport()
-        let query = transport.makeClient().query(Fixtures.LatestMessage(channel: "general"))
+        let query = transport.makeClient().observe(Fixtures.LatestMessage(channel: "general"))
         let subscription = await transport.nextRegistration()
         _ = await stateChange(of: query) { subscription.emit(#""hello""#) }
 
@@ -64,7 +64,7 @@ struct ObservationQueryTests {
 
     @Test func undecodableResultBecomesFailedState() async throws {
         let transport = Fixtures.Transport()
-        let query = transport.makeClient().query(Fixtures.LatestMessage(channel: "general"))
+        let query = transport.makeClient().observe(Fixtures.LatestMessage(channel: "general"))
         let subscription = await transport.nextRegistration()
 
         let state = await stateChange(of: query) { subscription.emit("42") }
@@ -80,7 +80,7 @@ struct ObservationQueryTests {
 
     @Test func explicitCancelEndsSubscriptionAndKeepsLastValue() async throws {
         let transport = Fixtures.Transport()
-        let query = transport.makeClient().query(Fixtures.LatestMessage(channel: "general"))
+        let query = transport.makeClient().observe(Fixtures.LatestMessage(channel: "general"))
         let subscription = await transport.nextRegistration()
         _ = await stateChange(of: query) { subscription.emit(#""hello""#) }
 
@@ -94,7 +94,7 @@ struct ObservationQueryTests {
 
     @Test func releasingModelCancelsSubscription() async throws {
         let transport = Fixtures.Transport()
-        var query: Query<String>? = transport.makeClient().query(
+        var query: Query<String>? = transport.makeClient().observe(
             Fixtures.LatestMessage(channel: "general")
         )
         weak let released = query
@@ -111,7 +111,7 @@ struct ObservationQueryTests {
 
     @Test func modelIsReleasedBeforeItsConsumerStarts() {
         let transport = Fixtures.Transport()
-        var query: Query<String>? = transport.makeClient().query(
+        var query: Query<String>? = transport.makeClient().observe(
             Fixtures.LatestMessage(channel: "general")
         )
         weak let released = query
