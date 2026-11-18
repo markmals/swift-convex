@@ -70,7 +70,7 @@ env.CONVEX_NATIVE_LOCAL = "1"
 [tasks.check]
 alias = "c"
 description = "Run the package, consumer, platform, documentation, and record gates"
-depends = ["test", "test:consumer", "build:platforms", "docs"]
+depends = ["test", "test:consumer", "build:platforms", "docs", "native:test"]
 run = ["hk check --all", "mise run validate"]
 
 [tasks.fmt]
@@ -98,6 +98,10 @@ run = "workbench beads close --output text"
 [tasks."native:build"]
 description = "Build the pinned native bridge for the three approved slices"
 run = "tools/build-native-runtime"
+
+[tasks."native:test"]
+description = "Run the pinned Rust boundary and value tests"
+run = "cd RustRuntime && cargo test --locked"
 
 [tasks."native:package"]
 description = "Package the native artifact with provenance and checksum"

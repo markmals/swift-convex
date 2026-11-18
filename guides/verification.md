@@ -5,7 +5,7 @@ title: Verifying Swift Convex
 
 # Verifying Swift Convex
 
-`mise run check` runs unit tests, the tagged external consumer, arm64 iOS device/simulator builds, DocC, lint, and Workbench validation. It uses the selected Xcode toolchain. Native maintainers first run `mise run native:build`; dependent applications use the published binary instead.
+`mise run check` runs Swift and Rust unit tests, the tagged external consumer, arm64 iOS device/simulator builds, DocC, lint, and Workbench validation. It uses the selected Xcode toolchain and the pinned Rust toolchain. Native maintainers first run `mise run native:build`; dependent applications use the published binary instead.
 
 ## Tagged consumer and private artifacts
 

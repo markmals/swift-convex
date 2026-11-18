@@ -63,11 +63,12 @@ The [client guide](guides/using-convex.md) includes a SwiftUI view, cancellation
 
 ## Development
 
-Use Xcode 27.2 or later with Swift 6.4 and the iOS SDK, plus mise:
+Use Xcode 27.2 or later with Swift 6.4 and the iOS SDK, plus mise and [rustup](https://rustup.rs) for native maintainer builds:
 
 ```sh
 mise trust && mise install
 mise run native:build
+CONVEX_NATIVE_LOCAL=1 mise run setup
 mise run check
 ```
 
@@ -80,6 +81,7 @@ Maintainer build/test tasks opt into the local native artifact. The external-con
 | `mise run build:platforms`  | Arm64 iOS device and simulator builds.                                                       |
 | `mise run docs`             | Public DocC reference with documentation warnings treated as errors.                         |
 | `mise run test:integration` | Live generated calls against an explicitly configured disposable backend.                    |
+| `mise run native:test`      | Rust value validation, cancellation, and authentication boundary tests.                      |
 | `mise run native:package`   | Matched native archive, checksum, provenance, and dependency license text.                   |
 
 The [verification guide](guides/verification.md) describes the live fixture and native release workflow. Unit tests require no deployment. Live tests are disabled unless a loopback fixture URL is supplied.

@@ -30,6 +30,15 @@ jobs:
             - uses: jdx/mise-action@v5
               with:
                   cache: false
+            - name: Read pinned Rust toolchain
+              id: rust
+              run: |
+                  toolchain=$(sed -n 's/^channel = "\(.*\)"$/\1/p' RustRuntime/rust-toolchain.toml)
+                  test -n "$toolchain"
+                  echo "toolchain=$toolchain" >> "$GITHUB_OUTPUT"
+            - uses: dtolnay/rust-toolchain@df2a88e9fe4098bad09cb42c3dec7187f15861fc
+              with:
+                  toolchain: ${{ steps.rust.outputs.toolchain }}
             - run: mise run native:build
             - name: Authenticate native dependency download
               env:
