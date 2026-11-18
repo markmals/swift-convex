@@ -48,3 +48,5 @@ Swift naming belongs in a separate target-local `convex-swift.json` configuratio
 Name overrides use rendered contract paths, for example `functions[messages:list]` for a request type and `functions[messages:list].arguments[channelId]` for an argument. The build plugin rejects a configured `output` because checked-in output and build-time output must not be compiled into the same target.
 
 The command plugin's `--check` mode does not write, but SwiftPM still requires `--allow-writing-to-package-directory` because plugin permissions are declared statically. Run `convex-swift-codegen --config path/to/convex-swift.json --check` directly when no plugin permission grant is desired.
+
+For a SwiftPM target, place the configuration in its source directory and exclude that JSON file from ordinary source handling. For a direct Xcode project target, include exactly one `convex-swift.json` among that target's inputs, for example as a resource, and attach `ConvexGenerate` as a build-tool plugin. Both hosts resolve `contract` relative to the configuration file and write generated Swift only to their plugin work directory.

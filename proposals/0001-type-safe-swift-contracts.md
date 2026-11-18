@@ -2,7 +2,7 @@
 id: proposal.0001
 title: Type-Safe Swift Contracts for Convex
 authors: [OpenAI coding assistant]
-status: awaiting-implementation
+status: active-review
 pull-request: https://github.com/markmals/swift-convex/pull/1
 issues: []
 supersedes: []
@@ -290,14 +290,14 @@ The application cost is a generated-artifact workflow and the native runtime dep
 
 This proposal defines one coherent feature: a generated, typed Swift client backed by the same Rust runtime as the official mobile client. Delivery includes the separate backend exporter, neutral format, Swift codecs and request/result types, live Observable queries, async query events, one-shot operations, authentication/lifetime boundary, native artifact distribution, generator, both plugin workflows, documentation, and the proofs above.
 
-The human approved implementation after incorporation of the Observable query integration requested in the final review. This proposal is `awaiting-implementation`; successful implementation and human acceptance remain separate gates.
+The human approved implementation after incorporation of the Observable query integration requested in the final review. Successful implementation and human acceptance remain separate gates.
 
 ### Out of scope
 
 - A new networking/sync engine or Linux runtime support, because this package reuses the official Rust client's protocol behavior and verifies only the approved initial platforms.
 - Swift backend authoring, internal/admin function execution, and HTTP action client generation, because those are different contracts from the public generated Convex API.
 - Additional SwiftUI property wrappers, optimistic-update caches, and automatic pagination controllers. The standard Observation-backed live query model is in scope; pagination-shaped arguments and results remain ordinary supported contracts.
-- Mandatory macros or handwritten schema DSLs, because neither is needed to derive this contract and both create another representation to maintain.
+- Custom endpoint/model macro packages or handwritten schema DSLs, because neither is needed to derive the contract. The built-in Observation macro is part of the approved live query model.
 - Coexistence or API compatibility with the official Swift SDK, because this package replaces that front end while retaining the shared Rust engine.
 - Complete translation of arbitrary TypeScript, because the generator supports concrete Convex wire contracts and explicitly diagnoses the rest.
 
