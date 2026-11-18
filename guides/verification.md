@@ -7,11 +7,11 @@ title: Verifying Swift Convex
 
 `mise run check` runs Swift and Rust unit tests, the tagged external consumer, arm64 iOS device/simulator builds, DocC, lint, and Workbench validation. It uses the selected Xcode toolchain and the pinned Rust toolchain. Native maintainers first run `mise run native:build`; dependent applications use the published binary instead.
 
-## Tagged consumer and private artifacts
+## Tagged consumer and published artifacts
 
 `mise run test:consumer` copies the current source snapshot into an isolated repository, tags the version in `Consumer/Package.swift`, and resolves it as a normal SwiftPM dependency. It compiles generated requests and the SwiftUI Observation example without `@testable`, then proves that wrong-table IDs, wrong operation kinds (including swapped `execute` labels), omitted required arguments, and caller-selected output types are rejected by the compiler.
 
-The consumer deliberately ignores `CONVEX_NATIVE_LOCAL` and downloads the published native artifact. While the repository is private, supply an API-host credential through SwiftPM's normal stores or set `CONVEX_TEST_NETRC` to an external mode-0600 netrc file. GitHub source-repository credentials and binary-download credentials may use different hosts. No token belongs in this repository.
+The consumer deliberately ignores `CONVEX_NATIVE_LOCAL` and downloads the public native artifact. No credentials are needed for package resolution or artifact downloads. `CONVEX_TEST_NETRC` remains available for testing private forks with an external mode-0600 netrc file; no token belongs in this repository.
 
 ## Live fixture
 
@@ -62,6 +62,6 @@ mise run native:package
 
 Outputs under `.build/native/` include `ConvexRuntimeFFI.xcframework.zip`, its SHA-256 file, and provenance. The archive contains arm64 macOS, iOS device, and iOS simulator slices plus license text for linked dependencies. Packaging rejects a changed Cargo lockfile, mismatched bindings/headers, or unrecorded slice hashes.
 
-Before publishing, commit native source and bindings, rebuild, and require `source.nativeSourcesModified` to be false in provenance. Publish an immutable native artifact, then update the URL and checksum in `Package.swift`. Private GitHub release assets use the API asset URL with a `.zip` suffix and SwiftPM authentication. Verify resolution as a consumer before merging the new pin. A successful local native build alone does not verify distribution.
+Before publishing, commit native source and bindings, rebuild, and require `source.nativeSourcesModified` to be false in provenance. Publish an immutable native artifact, then update the URL and checksum in `Package.swift`. The current public GitHub asset resolves without authentication. Verify resolution as a consumer before merging the new pin. A successful local native build alone does not verify distribution.
 
 `CONVEX_NATIVE_LOCAL=1` is an explicit maintainer opt-in to `.build/native/ConvexRuntimeFFI.xcframework`. It is not an automatic fallback. `swift package reset` removes that local build; run the build script again afterward. App builds never invoke Cargo or the TypeScript exporter.

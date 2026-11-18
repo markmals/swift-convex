@@ -9,7 +9,7 @@ updated: 2026-11-18
 
 Swift Convex gives Swift applications a compiler-checked contract with their Convex backend. Developers should discover functions, supply arguments, and consume results through Swift declarations derived from the backend, without maintaining a parallel set of string paths and handwritten response types.
 
-[Proposal 0001](proposals/0001-type-safe-swift-contracts.md) implements the initial contract, generator, and Rust-backed client, including live Observation-backed queries. The implementation is accepted for merge. A versioned Swift library release requires separate authorization.
+[Proposal 0001](proposals/0001-type-safe-swift-contracts.md) implements the initial contract, generator, and Rust-backed client, including live Observation-backed queries. The implementation is accepted and merged. Public MIT distribution and the first versioned Swift package release are authorized.
 
 ## Goals
 

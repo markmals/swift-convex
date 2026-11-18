@@ -6,7 +6,7 @@ let package = Package(
     name: "swift-convex-consumer",
     platforms: [.iOS(.v17), .macOS(.v14)],
     dependencies: [
-        .package(url: "https://github.com/markmals/swift-convex.git", from: "0.0.0")
+        .package(url: "https://github.com/markmals/swift-convex.git", from: "0.1.0")
     ],
     targets: [
         .testTarget(

@@ -2,22 +2,22 @@
 
 `Convex` is a typed Swift client and generator for Convex backends. Generated request values bind function identity, arguments, and output. `ConvexClient` reuses the official Rust runtime; `observe(_:)` returns a live Observation model.
 
-No Swift library version has been released. The initial runtime supports arm64 iOS 17, iOS Simulator, and macOS 14 with Swift 6.4.
+The initial runtime supports arm64 iOS 17, iOS Simulator, and macOS 14 with Swift 6.4.
 
-## Unreleased dependency
+## Installation
 
-Use the `main` branch while the first library release is pending:
+Add the package through Swift Package Manager:
 
 ```swift
 .package(
     url: "https://github.com/markmals/swift-convex.git",
-    branch: "main"
+    from: "0.1.0"
 )
 ```
 
 Add `.product(name: "Convex", package: "swift-convex")` to your target. Do not add the official `ConvexMobile` Swift SDK alongside it.
 
-The repository and its native binary artifact are private. SwiftPM needs GitHub read access for both the source repository and `api.github.com`. Configure a private netrc/keychain credential; CLI clients can pass `--netrc-file` to SwiftPM. Never put tokens in a package manifest. Applications download the checksummed native artifact and do not need Rust, Cargo, Node, or a deployment admin key to build.
+The source repository and checksummed native artifact are public; package installation needs no GitHub credentials. Applications download the native artifact and do not need Rust, Cargo, Node, or a deployment admin key to build.
 
 ## Generate the contract
 
@@ -72,7 +72,7 @@ CONVEX_NATIVE_LOCAL=1 mise run setup
 mise run check
 ```
 
-Maintainer build/test tasks opt into the local native artifact. The external-consumer check deliberately uses the published binary; set `CONVEX_TEST_NETRC` to a private credential-file path when credentials are not in SwiftPM's normal stores.
+Maintainer build/test tasks opt into the local native artifact. The external-consumer check deliberately downloads the published binary.
 
 | Command                     | Verification                                                                                 |
 | --------------------------- | -------------------------------------------------------------------------------------------- |
@@ -85,6 +85,10 @@ Maintainer build/test tasks opt into the local native artifact. The external-con
 | `mise run native:package`   | Matched native archive, checksum, provenance, and dependency license text.                   |
 
 The [verification guide](guides/verification.md) describes the live fixture and native release workflow. Unit tests require no deployment. Live tests are disabled unless a loopback fixture URL is supplied.
+
+## License
+
+The Swift library and generator are available under the [MIT license](LICENSE). The native Rust bridge retains its [Apache-2.0 license](RustRuntime/LICENSE); third-party components retain their own licenses and notices in [RustRuntime/NOTICE](RustRuntime/NOTICE) and the artifact's `Licenses` directory.
 
 ## Project record
 
