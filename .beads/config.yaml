@@ -73,3 +73,7 @@
 
 sync:
     remote: "git+https://github.com/markmals/swift-convex.git"
+export:
+    auto: true
+dolt:
+    auto-push: false
