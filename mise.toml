@@ -101,7 +101,7 @@ run = "tools/build-native-runtime"
 
 [tasks."native:test"]
 description = "Run the pinned Rust boundary and value tests"
-run = "cd RustRuntime && cargo test --locked"
+run = "tools/test-native-runtime"
 
 [tasks."native:package"]
 description = "Package the native artifact with provenance and checksum"

@@ -20,10 +20,8 @@ xcframework="$output/$framework.xcframework"
 record="$output/$framework.build.json"
 archive="$output/$framework.xcframework.zip"
 
-cargo_home="${CARGO_HOME:-$HOME/.cargo}"
-export CARGO_HOME="$cargo_home"
-export PATH="$cargo_home/bin:/usr/bin:/bin:/usr/sbin:/sbin"
-export RUSTUP_TOOLCHAIN="$(sed -n 's/^channel = "\(.*\)"$/\1/p' "$crate/rust-toolchain.toml")"
+source "$root/tools/native-toolchain.sh"
+configure_native_toolchain "$crate"
 
 if [[ ! -d "$xcframework" || ! -f "$record" ]]; then
     echo "error: run tools/build-native-runtime first" >&2

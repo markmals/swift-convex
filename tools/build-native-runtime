@@ -3,9 +3,9 @@
 # Simulator; regenerates the matching Swift bindings in Sources/ConvexNativeBindings; and
 # assembles .build/native/ConvexRuntimeFFI.xcframework plus its build record.
 #
-# Requires rustup (https://rustup.rs) and Xcode's command-line tools. It installs the pinned
-# toolchain and Apple targets through rustup when missing. PATH is limited to rustup and the
-# system/Xcode tools so that no Homebrew or other package-manager binary affects the artifact.
+# Requires rustup and Xcode's command-line tools. The pinned compiler and Apple targets
+# are installed through rustup when missing; only that compiler and system/Xcode tools
+# remain on PATH during compilation.
 # Select a different Xcode with DEVELOPER_DIR.
 set -euo pipefail
 
@@ -21,24 +21,9 @@ upstream_revision="f1a074ac2a4581f6f10f274eb237de05bbc91092"
 macos_deployment_target="14.0"
 ios_deployment_target="17.0"
 
-cargo_home="${CARGO_HOME:-$HOME/.cargo}"
-export CARGO_HOME="$cargo_home"
-export PATH="$cargo_home/bin:/usr/bin:/bin:/usr/sbin:/sbin"
-if ! command -v rustup >/dev/null; then
-    echo "error: rustup was not found in $cargo_home/bin; install it from https://rustup.rs" >&2
-    exit 1
-fi
-
-toolchain="$(sed -n 's/^channel = "\(.*\)"$/\1/p' "$crate/rust-toolchain.toml")"
-if [[ -z "$toolchain" ]]; then
-    echo "error: no channel in RustRuntime/rust-toolchain.toml" >&2
-    exit 1
-fi
-export RUSTUP_TOOLCHAIN="$toolchain"
-if ! rustup toolchain list | grep -q "^$toolchain-"; then
-    rustup toolchain install "$toolchain" --profile minimal
-fi
-rustup target add --toolchain "$toolchain" "${targets[@]}"
+source "$root/tools/native-toolchain.sh"
+configure_native_toolchain "$crate" "${targets[@]}"
+cargo_home="$CARGO_HOME"
 
 # Deterministic inputs: fixed deployment floors, archive dates, and machine-independent paths.
 # Source paths (this crate, the Cargo registry, and the toolchain's rust-src, which panic
@@ -125,7 +110,7 @@ for target in "${targets[@]}"; do
 done
 
 source_revision="$(git -C "$root" rev-parse HEAD 2>/dev/null || echo unknown)"
-source_changes="$(git -C "$root" status --porcelain -- RustRuntime tools/build-native-runtime 2>/dev/null || true)"
+source_changes="$(git -C "$root" status --porcelain -- RustRuntime tools/build-native-runtime tools/native-toolchain.sh 2>/dev/null || true)"
 
 jq -n \
     --arg framework "$framework" \
